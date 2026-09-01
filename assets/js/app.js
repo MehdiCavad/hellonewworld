@@ -230,24 +230,40 @@
       (item.meta ? '<span class="option-meta">' + escapeHtml(item.meta) + '</span>' : '');
   }
 
-  var choosing = false;
+  /* Answers are applied synchronously. An earlier version held a lock while a
+   * short "you picked this" animation played, which silently swallowed any tap
+   * or keypress landing inside that window — the worst possible failure for a
+   * ranking app, because the answer looks accepted. Feedback is now purely
+   * visual: the incoming pair animates in and nothing gates the input. */
   function choose(winnerId) {
     var session = state.session;
-    if (choosing || !session || !session.current) return;
-    choosing = true;
+    if (!session || !session.current) return;
 
-    if (winnerId) {
-      var node = el('optionA').dataset.id === winnerId ? el('optionA') : el('optionB');
-      node.classList.add('picked');
+    Engine.submit(session, winnerId);
+    Storage.saveSession(session);
+    if (session.finished) {
+      go('#/result/' + session.id);
+      return;
     }
-    /* A short beat so the tap registers visually before the pair swaps. */
-    setTimeout(function () {
-      Engine.submit(session, winnerId);
-      Storage.saveSession(session);
-      choosing = false;
-      if (session.finished) go('#/result/' + session.id);
-      else renderArena();
-    }, winnerId ? 130 : 0);
+    renderArena();
+    flashDuel();
+  }
+
+  function skipPair() {
+    if (!state.session || !state.session.current) return;
+    Engine.skip(state.session);
+    Storage.saveSession(state.session);
+    renderArena();
+    flashDuel();
+  }
+
+  /* Replays the swap animation on the freshly rendered pair. Removing the
+   * class and forcing a reflow makes it re-trigger every round. */
+  function flashDuel() {
+    var duel = el('duel');
+    duel.classList.remove('swap');
+    void duel.offsetWidth;
+    duel.classList.add('swap');
   }
 
   function finishEarly() {
@@ -475,6 +491,8 @@
       return;
     }
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+    /* Holding a key down should not blast through rounds. */
+    if (event.repeat) return;
 
     if (event.key === 'ArrowLeft' || event.key === '1') {
       event.preventDefault();
@@ -486,9 +504,8 @@
       event.preventDefault();
       choose(null);
     } else if (event.key === 's') {
-      Engine.skip(state.session);
-      Storage.saveSession(state.session);
-      renderArena();
+      event.preventDefault();
+      skipPair();
     } else if (event.key === 'u') {
       undoRound();
     }
@@ -521,11 +538,7 @@
     el('optionA').addEventListener('click', function () { choose(this.dataset.id); });
     el('optionB').addEventListener('click', function () { choose(this.dataset.id); });
     el('tieBtn').addEventListener('click', function () { choose(null); });
-    el('skipBtn').addEventListener('click', function () {
-      Engine.skip(state.session);
-      Storage.saveSession(state.session);
-      renderArena();
-    });
+    el('skipBtn').addEventListener('click', skipPair);
     el('undoBtn').addEventListener('click', undoRound);
     el('finishBtn').addEventListener('click', finishEarly);
 
