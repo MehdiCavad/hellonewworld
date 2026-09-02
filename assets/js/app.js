@@ -158,6 +158,7 @@
       levelId: level.id,
       levelName: level.name,
       mode: state.mode,
+      mediaKind: topic.media || 'wikipedia',
       items: pool,
       targetRounds: Data.roundsFor(level, pool.length),
       seed: seed
@@ -189,14 +190,8 @@
 
     renderOption(el('optionA'), session.items[session.current[0]], '←');
     renderOption(el('optionB'), session.items[session.current[1]], '→');
-
-    /* In king of the hill the champion holds its slot, so flag which card is
-     * the one staying put. renderOption resets className, so this comes after. */
-    if (session.mode === 'gauntlet' && session.champion) {
-      [el('optionA'), el('optionB')].forEach(function (node) {
-        if (node.dataset.id === session.champion) node.classList.add('is-champion');
-      });
-    }
+    markChampion(el('optionA'));
+    markChampion(el('optionB'));
 
     el('undoBtn').disabled = session.history.length === 0;
     el('finishBtn').disabled = session.history.length < 3;
@@ -208,14 +203,124 @@
   }
 
   function renderOption(node, item, key) {
-    var media = Media.get(item);
+    var kind = state.session.mediaKind;
+    var media = Media.get(item, kind);
+    var clip = Media.audio(item, kind);
     node.className = 'option' + (media ? ' has-media' : '');
     node.dataset.id = item.id;
     node.innerHTML =
       '<span class="option-key">' + key + '</span>' +
-      (media ? '<img class="option-media" src="' + escapeHtml(media) + '" alt="" loading="eager">' : '') +
+      (media ? artHtml(media, clip, kind) : '') +
       '<span class="option-name">' + escapeHtml(item.name) + '</span>' +
       (item.meta ? '<span class="option-meta">' + escapeHtml(item.meta) + '</span>' : '');
+  }
+
+  /* In king of the hill the champion holds its slot, so flag which card is
+   * the one staying put. renderOption resets className, so call this after. */
+  function markChampion(node) {
+    var session = state.session;
+    if (session.mode === 'gauntlet' && session.champion && node.dataset.id === session.champion) {
+      node.classList.add('is-champion');
+    }
+  }
+
+  /* Media arriving must not re-render the arena wholesale: results trickle in
+   * every few hundred milliseconds, and a full re-render each time would wipe
+   * keyboard focus and a playing preview's progress. Only a card whose media
+   * state actually changed is redrawn, and that happens once per card. */
+  function refreshArenaMedia() {
+    var session = state.session;
+    if (!session || !session.current) return;
+    [['optionA', 0, '←'], ['optionB', 1, '→']].forEach(function (slot) {
+      var node = el(slot[0]);
+      var item = session.items[session.current[slot[1]]];
+      var hasMedia = !!Media.get(item, session.mediaKind);
+      if (hasMedia !== !!node.querySelector('.option-media')) {
+        renderOption(node, item, slot[2]);
+        markChampion(node);
+      }
+    });
+    syncPreviewUi();
+  }
+
+  var PLAY_GLYPHS =
+    '<svg class="play-glyph" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5v9l7.5-4.5z"/></svg>' +
+    '<svg class="stop-glyph" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7"/></svg>';
+
+  function artHtml(media, clip, kind) {
+    return '<span class="option-art' + (clip ? ' has-progress' : '') + '">' +
+      '<img class="option-media" data-shape="' + Media.shape(kind) + '" src="' + escapeHtml(media) + '" alt="" loading="eager">' +
+      (clip
+        ? '<span class="play" role="button" tabindex="0" aria-label="Play preview" data-clip="' + escapeHtml(clip) + '">' +
+            PLAY_GLYPHS + '</span><span class="play-progress"></span>'
+        : '') +
+      '</span>';
+  }
+
+  /* ---------- song previews ----------
+   * One shared <audio>. The control sits inside the option button, so its
+   * clicks are intercepted in onOptionClick before they can count as a pick. */
+  var player = null;
+
+  function getPlayer() {
+    if (player) return player;
+    player = new Audio();
+    player.preload = 'none';
+    player.hidden = true;
+    document.body.appendChild(player);   // in the tree so devtools and tests can see it
+    player.addEventListener('timeupdate', function () {
+      var btn = document.querySelector('.play.playing');
+      if (btn && player.duration) btn.parentNode.style.setProperty('--p', player.currentTime / player.duration);
+    });
+    player.addEventListener('ended', stopPreview);
+    player.addEventListener('error', stopPreview);
+    return player;
+  }
+
+  function stopPreview() {
+    if (player && !player.paused) player.pause();
+    var btn = document.querySelector('.play.playing');
+    if (btn) {
+      btn.classList.remove('playing');
+      btn.setAttribute('aria-label', 'Play preview');
+      btn.parentNode.style.removeProperty('--p');
+    }
+  }
+
+  function togglePreview(btn) {
+    var wasPlaying = btn.classList.contains('playing');
+    stopPreview();
+    if (wasPlaying) return;
+    var audioEl = getPlayer();
+    if (audioEl.src !== btn.dataset.clip) audioEl.src = btn.dataset.clip;
+    audioEl.currentTime = 0;
+    btn.classList.add('playing');
+    btn.setAttribute('aria-label', 'Stop preview');
+    var started = audioEl.play();
+    if (started && started.catch) started.catch(stopPreview);
+  }
+
+  /* After a re-render (images arriving), put the playing state back on the
+   * control whose clip is still sounding. */
+  function syncPreviewUi() {
+    if (!player || player.paused) return;
+    var buttons = document.querySelectorAll('.play');
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i].dataset.clip === player.src) {
+        buttons[i].classList.add('playing');
+        buttons[i].setAttribute('aria-label', 'Stop preview');
+      }
+    }
+  }
+
+  function onOptionClick(event) {
+    var play = event.target.closest('.play');
+    if (play) {
+      event.preventDefault();
+      togglePreview(play);
+      return;
+    }
+    choose(this.dataset.id);
   }
 
   /* Answers are applied synchronously. An earlier version held a lock while a
@@ -227,6 +332,7 @@
     var session = state.session;
     if (!session || !session.current) return;
 
+    stopPreview();
     Engine.submit(session, winnerId);
     Storage.saveSession(session);
     if (session.finished) {
@@ -239,6 +345,7 @@
 
   function skipPair() {
     if (!state.session || !state.session.current) return;
+    stopPreview();
     Engine.skip(state.session);
     Storage.saveSession(state.session);
     renderArena();
@@ -278,9 +385,9 @@
       plural(rows.length, 'option') + ' · ' + plural(session.history.length, 'comparison') + '</span></span>';
 
     var winner = rows[0];
-    var winnerMedia = Media.get(winner);
+    var winnerMedia = Media.get(winner, session.mediaKind);
     el('podium').innerHTML = '<div class="winner">' +
-      (winnerMedia ? '<img class="winner-media" src="' + escapeHtml(winnerMedia) + '" alt="">' : '') +
+      (winnerMedia ? '<img class="winner-media" data-shape="' + Media.shape(session.mediaKind) + '" src="' + escapeHtml(winnerMedia) + '" alt="">' : '') +
       '<span class="winner-rank">1</span>' +
       '<span class="winner-body">' +
         '<span class="winner-name">' + escapeHtml(winner.name) + '</span>' +
@@ -302,15 +409,15 @@
         var flag = row.confidence < 0.5
           ? '<span class="low-conf" title="Seen in only ' + plural(row.played, 'comparison') + '">low data</span>'
           : '';
-        var media = Media.get(row);
-        var page = Media.pageUrl(row);
+        var media = Media.get(row, session.mediaKind);
+        var page = Media.link(row, session.mediaKind);
         var name = page
           ? '<a href="' + escapeHtml(page) + '" target="_blank" rel="noopener">' + escapeHtml(row.name) + '</a>'
           : escapeHtml(row.name);
         return '<tr>' +
           '<td class="rank">' + row.rank + '</td>' +
           '<td class="name"><div class="name-cell">' +
-            (media ? '<img class="thumb" src="' + escapeHtml(media) + '" alt="" loading="lazy">' : '') +
+            (media ? '<img class="thumb" data-shape="' + Media.shape(session.mediaKind) + '" src="' + escapeHtml(media) + '" alt="" loading="lazy">' : '') +
             '<div><b>' + name + '</b>' + flag +
             (row.meta ? '<span class="meta">' + escapeHtml(row.meta) + '</span>' : '') + '</div>' +
           '</div></td>' +
@@ -431,7 +538,16 @@
     window.scrollTo(0, 0);
   }
 
+  /* The pair on screen goes to the front of the queue, so what the user is
+   * looking at fills in before the rest of the pool. */
+  function prefetchMedia(session) {
+    var current = session.current || [];
+    var rest = session.order.filter(function (id) { return current.indexOf(id) === -1; });
+    Media.prefetch(current.concat(rest).map(function (id) { return session.items[id]; }), session.mediaKind);
+  }
+
   function render() {
+    stopPreview();
     var route = (location.hash || '#/').replace(/^#/, '');
     var parts = route.split('/').filter(Boolean);
 
@@ -451,7 +567,7 @@
       var session = Storage.getSession(parts[1]);
       if (!session) return go('#/');
       state.session = session;
-      Media.prefetch(session.order.map(function (id) { return session.items[id]; }));
+      prefetchMedia(session);
       if (parts[0] === 'play') {
         if (session.finished) return go('#/result/' + session.id);
         show('arena');
@@ -494,6 +610,13 @@
     /* Holding a key down should not blast through rounds. */
     if (event.repeat) return;
 
+    var play = event.target.closest && event.target.closest('.play');
+    if (play && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      togglePreview(play);
+      return;
+    }
+
     if (event.key === 'ArrowLeft' || event.key === '1') {
       event.preventDefault();
       choose(el('optionA').dataset.id);
@@ -513,6 +636,7 @@
 
   function undoRound() {
     if (!state.session || !state.session.history.length) return;
+    stopPreview();
     Engine.undo(state.session);
     Storage.saveSession(state.session);
     renderArena();
@@ -524,7 +648,7 @@
     window.addEventListener('hashchange', render);
     Media.onChange(function () {
       if (!state.session) return;
-      if (!el('screen-arena').hidden) renderArena();
+      if (!el('screen-arena').hidden) refreshArenaMedia();
       else if (!el('screen-results').hidden) renderResults();
     });
 
@@ -540,8 +664,8 @@
     });
 
     el('startBtn').addEventListener('click', startSession);
-    el('optionA').addEventListener('click', function () { choose(this.dataset.id); });
-    el('optionB').addEventListener('click', function () { choose(this.dataset.id); });
+    el('optionA').addEventListener('click', onOptionClick);
+    el('optionB').addEventListener('click', onOptionClick);
     el('tieBtn').addEventListener('click', function () { choose(null); });
     el('skipBtn').addEventListener('click', skipPair);
     el('undoBtn').addEventListener('click', undoRound);

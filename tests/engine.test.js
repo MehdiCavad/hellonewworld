@@ -322,29 +322,103 @@ test('custom topics parse names, optional meta and blank lines', function () {
 });
 
 
+/* Pairing rules the user can feel: nothing shown twice running, no repeats. */
+test('smart duels never show an option in two consecutive rounds', function () {
+  [8, 16, 24].forEach(function (n) {
+    var s = newSession(n, { targetRounds: Data.maxUsefulRounds(n), seed: n * 11 });
+    var prev = null;
+    while (s.current) {
+      if (prev) {
+        assert.ok(prev.indexOf(s.current[0]) === -1 && prev.indexOf(s.current[1]) === -1,
+          'n=' + n + ': ' + s.current + ' overlaps previous ' + prev);
+      }
+      prev = s.current.slice();
+      Engine.submit(s, s.current[0]);
+    }
+  });
+});
+
+test('no pair is asked twice while unasked pairs remain', function () {
+  [8, 16].forEach(function (n) {
+    var s = newSession(n, { targetRounds: Data.maxUsefulRounds(n), seed: n * 13 });
+    var seen = {};
+    while (s.current) {
+      var k = s.current.slice().sort().join('|');
+      assert.ok(!seen[k], 'n=' + n + ': pair ' + k + ' was asked twice');
+      seen[k] = true;
+      Engine.submit(s, s.current[1]);
+    }
+  });
+});
+
+test('king of the hill benches the beaten side for a round', function () {
+  var s = newSession(12, { mode: 'gauntlet', targetRounds: 40, seed: 5 });
+  var rng = Engine.makeRng(9);
+  var prev = null;
+  while (s.current) {
+    if (prev) {
+      var loser = prev[0] === s.champion ? prev[1] : prev[0];
+      assert.ok(s.current.indexOf(loser) === -1, 'loser ' + loser + ' came straight back');
+    }
+    prev = s.current.slice();
+    Engine.submit(s, rng() < 0.7 ? s.champion || s.current[0] : (s.current[0] === s.champion ? s.current[1] : s.current[0]));
+  }
+});
+
+test('a tiny pool still gets a pair when repeats are unavoidable', function () {
+  var s = newSession(3, { targetRounds: 9 });
+  for (var i = 0; i < 9; i++) {
+    assert.ok(s.current, 'round ' + i + ' must still offer a pair');
+    Engine.submit(s, s.current[0]);
+  }
+  assert.strictEqual(s.finished, true);
+});
+
+test('sessions carry the media source and the wiki title', function () {
+  var s = Engine.createSession({
+    topicId: 't', topicName: 'T', levelId: 'x', levelName: 'X', targetRounds: 5, mediaKind: 'itunes:song',
+    items: [{ id: 'a', name: 'Parasite', wiki: 'Parasite (2019 film)' }, { id: 'b', name: 'Pelé' }]
+  });
+  assert.strictEqual(s.mediaKind, 'itunes:song');
+  assert.strictEqual(s.items.a.wiki, 'Parasite (2019 film)');
+  var parasite = Engine.standings(s).filter(function (r) { return r.id === 'a'; })[0];
+  assert.strictEqual(parasite.wiki, 'Parasite (2019 film)', 'the results screen reads standings rows');
+  var plain = Engine.createSession({ topicId: 't', topicName: 'T', targetRounds: 5, items: makeItems(2) });
+  assert.strictEqual(plain.mediaKind, 'wikipedia');
+});
+
 /* Media lookup — the pure parts; the network is exercised in the browser. */
 var Media = require(path.join(__dirname, '..', 'assets', 'js', 'media.js'));
 
-test('media looks items up by their wiki title when one is set', function () {
-  assert.strictEqual(Media.titleOf({ name: 'Parasite', wiki: 'Parasite (2019 film)' }), 'Parasite (2019 film)');
-  assert.strictEqual(Media.titleOf({ name: 'Lionel Messi', wiki: '' }), 'Lionel Messi');
+test('media asks each source in the words it understands', function () {
+  assert.strictEqual(Media.queryFor({ name: 'Parasite', meta: '2019', wiki: 'Parasite (2019 film)' }, 'wikipedia'), 'Parasite (2019 film)');
+  assert.strictEqual(Media.queryFor({ name: 'Parasite', meta: '2019', wiki: 'Parasite (2019 film)' }, 'itunes:movie'), 'Parasite 2019');
+  assert.strictEqual(Media.queryFor({ name: 'Halo', meta: 'Beyoncé' }, 'itunes:song'), 'Halo Beyoncé');
+  assert.strictEqual(Media.kindOf('nonsense'), 'wikipedia');
 });
 
-test('media only accepts Commons-hosted images', function () {
+test('media keys are scoped by source so a song and a film can share a name', function () {
+  assert.notStrictEqual(Media.keyFor({ name: 'Titanic', meta: '1997' }, 'itunes:movie'),
+                        Media.keyFor({ name: 'Titanic', meta: '1997' }, 'wikipedia'));
+});
+
+test('media shapes follow the kind of thing', function () {
+  assert.strictEqual(Media.shape('itunes:movie'), 'poster');
+  assert.strictEqual(Media.shape('itunes:tvSeason'), 'poster');
+  assert.strictEqual(Media.shape('itunes:song'), 'square');
+  assert.strictEqual(Media.shape('wikipedia'), 'portrait');
+});
+
+test('wikipedia: only Commons-hosted images, batched, CORS-enabled', function () {
   assert.ok(Media.isFree('https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/X.jpg/640px-X.jpg'));
-  assert.ok(!Media.isFree('https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Poster.jpg/640px-Poster.jpg'),
-    'a poster kept locally on en.wikipedia is usually non-free');
-});
-
-test('media request batches titles into one CORS-enabled API call', function () {
-  var url = Media.requestUrl(['Lionel Messi', 'Pelé']);
+  assert.ok(!Media.isFree('https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Poster.jpg/640px-Poster.jpg'));
+  var url = Media.wikiRequestUrl(['Lionel Messi', 'Pelé']);
   assert.ok(url.indexOf('https://en.wikipedia.org/w/api.php?') === 0);
-  assert.ok(url.indexOf('origin=*') !== -1, 'origin=* is what makes the API answer cross-origin');
-  assert.ok(url.indexOf('redirects=1') !== -1);
+  assert.ok(url.indexOf('origin=*') !== -1 && url.indexOf('redirects=1') !== -1);
   assert.ok(url.indexOf('titles=' + encodeURIComponent('Lionel Messi|Pelé')) !== -1);
 });
 
-test('media follows normalisation and redirects back to the requested title', function () {
+test('wikipedia: follows normalisation and redirects back to the requested title', function () {
   var json = { query: {
     normalized: [{ from: 'xavi', to: 'Xavi' }],
     redirects: [{ from: 'Xavi', to: 'Xavi (footballer)' }],
@@ -354,45 +428,52 @@ test('media follows normalisation and redirects back to the requested title', fu
       { title: 'Nobody Here', missing: true }
     ]
   } };
-  var out = Media.parseResponse(json, ['xavi', 'Parasite (2019 film)', 'Nobody Here']);
+  var out = Media.wikiParse(json, ['xavi', 'Parasite (2019 film)', 'Nobody Here']);
   assert.strictEqual(out['xavi'].url, 'https://upload.wikimedia.org/wikipedia/commons/x/xa/Xavi.jpg');
-  assert.strictEqual(out['xavi'].page, 'Xavi (footballer)', 'attribution points at the final article');
+  assert.strictEqual(out['xavi'].link, 'https://en.wikipedia.org/wiki/Xavi_(footballer)');
   assert.strictEqual(out['Parasite (2019 film)'].url, null, 'non-free poster is dropped');
-  assert.strictEqual(out['Parasite (2019 film)'].page, 'Parasite (2019 film)', 'but the article link stays');
+  assert.ok(out['Parasite (2019 film)'].link, 'but the article link stays');
   assert.strictEqual(out['Nobody Here'].url, null);
-  assert.strictEqual(out['Nobody Here'].page, null);
+  assert.strictEqual(out['Nobody Here'].link, null);
 });
 
-test('media get() is cache-only and honours the 30-day expiry', function () {
+test('itunes: one search per option, right entity, JSONP callback slot', function () {
+  var url = Media.itunesRequestUrl('Halo Beyoncé', 'itunes:song', 'cb1');
+  assert.ok(url.indexOf('https://itunes.apple.com/search?term=' + encodeURIComponent('Halo Beyoncé')) === 0);
+  assert.ok(url.indexOf('entity=song') !== -1 && url.indexOf('media=music') !== -1 && url.indexOf('limit=1') !== -1);
+  assert.ok(url.indexOf('callback=cb1') !== -1);
+  assert.ok(Media.itunesRequestUrl('Titanic 1997', 'itunes:movie').indexOf('entity=movie&media=movie') !== -1);
+});
+
+test('itunes: artwork is upscaled, previews and store links are kept', function () {
+  var out = Media.itunesParse({ resultCount: 1, results: [{
+    artworkUrl100: 'https://is1-ssl.mzstatic.com/image/thumb/Music/x/y/z/source/100x100bb.jpg',
+    previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview/x/preview.m4a',
+    trackViewUrl: 'https://music.apple.com/us/album/halo/1?i=2'
+  }] });
+  assert.strictEqual(out.url, 'https://is1-ssl.mzstatic.com/image/thumb/Music/x/y/z/source/600x600bb.jpg');
+  assert.strictEqual(out.audio, 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview/x/preview.m4a');
+  assert.strictEqual(out.link, 'https://music.apple.com/us/album/halo/1?i=2');
+  var miss = Media.itunesParse({ resultCount: 0, results: [] });
+  assert.deepStrictEqual(miss, { url: null, link: null, audio: null });
+});
+
+test('media reads are cache-only and honour the 30-day expiry', function () {
   Media._reset();
   var store = {};
-  global.Storage = {
-    mediaCache: function () { return store; },
-    saveMediaCache: function (c) { store = c; }
-  };
-  store['Fresh'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/F.jpg', page: 'Fresh', ts: Date.now() };
-  store['Stale'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/s/s1/S.jpg', page: 'Stale', ts: Date.now() - 31 * 86400000 };
-  assert.strictEqual(Media.get({ name: 'Fresh' }), store['Fresh'].url);
-  assert.strictEqual(Media.get({ name: 'Stale' }), null, 'expired entries are treated as absent');
-  assert.strictEqual(Media.get({ name: 'Unknown' }), null);
-  assert.strictEqual(Media.pageUrl({ name: 'Fresh' }), 'https://en.wikipedia.org/wiki/Fresh');
-  assert.strictEqual(Media.prefetch([{ name: 'Fresh' }]), 0, 'without fetch() prefetch is a no-op');
+  global.Storage = { mediaCache: function () { return store; }, saveMediaCache: function (c) { store = c; } };
+  store['wikipedia|Fresh'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/F.jpg', link: 'https://en.wikipedia.org/wiki/Fresh', ts: Date.now() };
+  store['wikipedia|Stale'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/s/s1/S.jpg', link: 'x', ts: Date.now() - 31 * 86400000 };
+  store['itunes:song|Halo Beyoncé'] = { url: 'https://is1-ssl.mzstatic.com/c.jpg', audio: 'https://audio-ssl.itunes.apple.com/p.m4a', link: 'https://music.apple.com/x', ts: Date.now() };
+  assert.strictEqual(Media.get({ name: 'Fresh' }, 'wikipedia'), store['wikipedia|Fresh'].url);
+  assert.strictEqual(Media.get({ name: 'Stale' }, 'wikipedia'), null, 'expired entries are treated as absent');
+  assert.strictEqual(Media.get({ name: 'Unknown' }, 'wikipedia'), null);
+  assert.strictEqual(Media.link({ name: 'Fresh' }, 'wikipedia'), 'https://en.wikipedia.org/wiki/Fresh');
+  assert.strictEqual(Media.audio({ name: 'Halo', meta: 'Beyoncé' }, 'itunes:song'), 'https://audio-ssl.itunes.apple.com/p.m4a');
+  assert.strictEqual(Media.audio({ name: 'Fresh' }, 'wikipedia'), null, 'photos have no clip');
+  assert.strictEqual(Media.prefetch([{ name: 'Fresh' }], 'wikipedia'), 0, 'without a document prefetch is a no-op');
   delete global.Storage;
   Media._reset();
 });
 
-test('sessions carry the wiki title so a resumed session can still find images', function () {
-  var s = Engine.createSession({
-    topicId: 't', topicName: 'T', levelId: 'x', levelName: 'X', targetRounds: 5,
-    items: [{ id: 'a', name: 'Parasite', wiki: 'Parasite (2019 film)' }, { id: 'b', name: 'Pelé' }]
-  });
-  assert.strictEqual(s.items.a.wiki, 'Parasite (2019 film)');
-  assert.strictEqual(s.items.b.wiki, '');
-  /* The results screen reads standings rows, not session items, so the title
-   * has to survive that hop too or half the table silently loses its images. */
-  var rows = Engine.standings(s);
-  var parasite = rows.filter(function (r) { return r.id === 'a'; })[0];
-  assert.strictEqual(parasite.wiki, 'Parasite (2019 film)');
-});
-
-console.log('\n' + passed + ' tests passed (incl. media)');
+console.log('\n' + passed + ' tests passed');

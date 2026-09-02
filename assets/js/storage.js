@@ -13,7 +13,7 @@
   var KEY_SESSIONS = PREFIX + 'sessions';
   var KEY_TOPICS = PREFIX + 'topics';
   var KEY_PREFS = PREFIX + 'prefs';
-  var KEY_MEDIA = PREFIX + 'media';
+  var KEY_MEDIA = PREFIX + 'media2';
   var MAX_SESSIONS = 60;
 
   var memory = {};

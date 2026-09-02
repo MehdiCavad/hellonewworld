@@ -16,8 +16,9 @@
  *
  * Pairing strategies:
  *   smart    - scores every possible pair and serves the most informative
- *              one: close in rating, not asked before, and covering items the
- *              session has seen least.
+ *              one: close in rating, never asked before, not featuring an
+ *              option from the previous round, and covering items the session
+ *              has seen least.
  *   gauntlet - the winner stays on and faces a fresh challenger
  *              (king of the hill). Fun, but weaker at ordering the tail.
  */
@@ -26,6 +27,7 @@
 
   var BASE_RATING = 1500;
   var RATING_SCALE = 400;
+  var NEVER = 100000;   // a cost no rating gap can outweigh
   var PRIOR = 0.5;        // pseudo win + pseudo loss against a virtual average
   var MAX_ITERATIONS = 400;
   var TOLERANCE = 1e-10;
@@ -80,6 +82,7 @@
       levelId: options.levelId,
       levelName: options.levelName,
       mode: options.mode === 'gauntlet' ? 'gauntlet' : 'smart',
+      mediaKind: options.mediaKind || 'wikipedia',
       targetRounds: options.targetRounds || 0,
       seed: options.seed || Math.floor(Math.random() * 1e9),
       createdAt: options.createdAt || Date.now(),
@@ -179,8 +182,6 @@
     if (ids.length < 2) return null;
     var random = rngFor(session);
     var items = session.items;
-    var lastKey = session.current ? pairKey(session.current[0], session.current[1]) : null;
-
     var minPlayed = Infinity;
     ids.forEach(function (id) { minPlayed = Math.min(minPlayed, items[id].played); });
 
@@ -189,6 +190,14 @@
     var champion = (session.mode === 'gauntlet' && session.champion && items[session.champion])
       ? session.champion
       : null;
+
+    /* Options shown last round, other than a reigning champion, sit out the
+     * next one. Both rules below are "never" in practice: the penalty dwarfs
+     * any rating gap, so they only bend when the pool is too small to obey. */
+    var restBench = {};
+    (session.current || []).forEach(function (id) {
+      if (id !== champion) restBench[id] = true;
+    });
 
     var pairs = [];
     for (var i = 0; i < ids.length; i++) {
@@ -199,13 +208,14 @@
         var key = pairKey(a.id, b.id);
         var seen = session.pairSeen[key] || 0;
         /* Lower cost is a better next question: close in rating (so the answer
-         * is informative), not asked before, and involving items the session
-         * has not already over-sampled. */
+         * is informative), never asked before, not featuring an option from the
+         * previous round, and involving items the session has not already
+         * over-sampled. */
         var cost = Math.abs(a.rating - b.rating)
-          + seen * 500
+          + seen * NEVER
+          + ((restBench[a.id] ? 1 : 0) + (restBench[b.id] ? 1 : 0)) * NEVER
           + (a.played - minPlayed) * 70
           + (b.played - minPlayed) * 70;
-        if (lastKey && key === lastKey) cost += 10000;
         pairs.push({ a: a.id, b: b.id, cost: cost });
       }
     }

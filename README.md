@@ -34,22 +34,39 @@ also means it drops straight into a mobile WebView if you want to ship it as an 
    record, CSV export and a copy-the-top-10 button. Everything is saved, so you
    can leave mid-session and come back, or refine a finished ranking further.
 
-## Photos
+## Photos, posters and previews
 
-Options show a photo where a freely licensed one exists. Images come from
-Wikimedia Commons via Wikipedia's `pageimages` API — one batched request per
-session, no API key, cached in the browser for 30 days. Only Commons-hosted
-files are used, because those carry free licences; film posters and album
-covers are usually non-free files kept on en.wikipedia, so most films stay
-text-only. Set `Media.config.freeOnly = false` in `assets/js/media.js` to use
-them anyway, at your own licensing risk. On the results page each option's
-name links to its Wikipedia article as attribution.
+Every option can carry media, from one of two free, key-less sources chosen
+per topic:
 
-Where a name is ambiguous, the catalogue carries the article title as a fourth
+| Topic | Source | Shows |
+|---|---|---|
+| Movies, TV Series | iTunes Search API | store poster / season art |
+| Songs | iTunes Search API | album cover **and a 30-second preview** you can play on the card |
+| Actors, Footballers, Music Artists, Food, Languages, Cities, custom | Wikipedia `pageimages` → Wikimedia Commons | a freely licensed photo |
+
+iTunes is loaded as JSONP (one request per option, spaced ~220 ms apart because
+the API rate-limits bursts, the pair on screen first). Apple chooses the preview
+segment — almost always the hook, but the app calls it a *preview* rather than
+promising the chorus. Wikipedia is one batched request per pool; only
+Commons-hosted files are used because those carry free licences. Everything is
+cached in the browser for 30 days, misses included, and every failure degrades
+to the plain text card: media is never on the ranking's critical path.
+
+On the results page each option's name links to where its media came from —
+the Wikipedia article or the store page.
+
+Where a Wikipedia title is ambiguous, the catalogue carries it as a fourth
 field (`Parasite|2019|2|Parasite (2019 film)`); custom topics accept the same
-after a second `|`. Everything degrades to the plain text card when the lookup
-fails or the network is unavailable — images are never on the ranking's
-critical path.
+after a second `|`.
+
+## Pairing rules
+
+Beyond picking the most informative pair, two rules you can feel: an option
+never appears in two consecutive rounds, and no pair is ever asked twice while
+unasked pairs remain. King of the hill's champion is the deliberate exception
+to the first — it is *supposed* to stay. Both bend only when the pool is too
+small to obey them (three options, say).
 
 ## How the ranking is computed
 

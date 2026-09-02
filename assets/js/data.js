@@ -18,6 +18,7 @@
       name: 'Movies',
       emoji: '🎬',
       blurb: 'All-time cinema',
+      media: 'itunes:movie',
       items: [
         'The Godfather|1972|1', 'The Shawshank Redemption|1994|1', 'Pulp Fiction|1994|1',
         'The Dark Knight|2008|1', 'Forrest Gump|1994|1', 'Inception|2010|1',
@@ -84,6 +85,25 @@
         'Fela Kuti|Nigeria|3', 'Tom Waits|USA|3', 'Cocteau Twins|UK|3'
       ]
     },
+    songs: {
+      name: 'Songs',
+      emoji: '🎵',
+      blurb: 'Play the hook, then pick',
+      media: 'itunes:song',
+      items: [
+        'Bohemian Rhapsody|Queen|1', 'Billie Jean|Michael Jackson|1', 'Smells Like Teen Spirit|Nirvana|1',
+        'Rolling in the Deep|Adele|1', 'Shape of You|Ed Sheeran|1', 'Blinding Lights|The Weeknd|1',
+        'Hey Jude|The Beatles|1', 'Hotel California|Eagles|1', 'Lose Yourself|Eminem|1',
+        'Sweet Child O\' Mine|Guns N\' Roses|1',
+        'Wonderwall|Oasis|2', 'Halo|Beyoncé|2', 'Seven Nation Army|The White Stripes|2',
+        'Rehab|Amy Winehouse|2', 'Get Lucky|Daft Punk|2', 'Purple Rain|Prince|2',
+        'Like a Rolling Stone|Bob Dylan|2', 'Karma Police|Radiohead|2', 'Superstition|Stevie Wonder|2',
+        'Ring of Fire|Johnny Cash|2',
+        'Teardrop|Massive Attack|3', 'Glory Box|Portishead|3', 'Love Will Tear Us Apart|Joy Division|3',
+        'Feeling Good|Nina Simone|3', 'Windowlicker|Aphex Twin|3', 'Hoppípolla|Sigur Rós|3',
+        'Zombie|Fela Kuti|3', 'Downtown Train|Tom Waits|3'
+      ]
+    },
     food: {
       name: 'Food',
       emoji: '🍽️',
@@ -135,6 +155,7 @@
       name: 'TV Series',
       emoji: '📺',
       blurb: 'Binge-worthy or overrated',
+      media: 'itunes:tvSeason',
       items: [
         'Breaking Bad|2008|1', 'Game of Thrones|2011|1', 'The Sopranos|1999|1',
         'The Wire|2002|1', 'Friends|1994|1', 'Chernobyl|2019|1|Chernobyl (miniseries)',
@@ -182,6 +203,7 @@
       name: raw.name,
       emoji: raw.emoji,
       blurb: raw.blurb,
+      media: raw.media || 'wikipedia',
       builtIn: true,
       items: raw.items.map(function (row, i) { return parseItem(row, id, i); })
     };
@@ -208,6 +230,7 @@
       name: name.trim(),
       emoji: emoji || '⭐',
       blurb: items.length + ' options',
+      media: 'wikipedia',
       builtIn: false,
       items: items
     };

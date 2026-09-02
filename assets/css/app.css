@@ -361,18 +361,51 @@ kbd {
 
 /* ---------- media ---------- */
 
-/* Photos share one portrait frame so a headshot, a skyline and a plate of food
- * all sit in the same shape; cover-cropping from the top keeps faces in. */
+/* One frame per kind of thing — photos portrait, posters 2:3, covers square —
+ * so both sides of a duel always share a shape. Cover-cropping from the top
+ * keeps faces in. */
 .option-media, .winner-media, .thumb {
   aspect-ratio: 4 / 5;
   object-fit: cover; object-position: center top;
   border: 1px solid var(--line); border-radius: 4px;
   background: var(--sunk);
+  display: block;
 }
-.option-media { width: min(100%, 168px); margin-bottom: 10px; }
+[data-shape="poster"] { aspect-ratio: 2 / 3; }
+[data-shape="square"] { aspect-ratio: 1 / 1; }
+.option-art { position: relative; display: block; width: min(100%, 168px); margin-bottom: 10px; }
+.option-media { width: 100%; }
 .option.has-media { justify-content: flex-start; padding-top: 40px; }
 .winner-media { width: 112px; align-self: flex-start; flex: none; }
 .thumb { width: 36px; flex: none; }
+
+/* Song preview: one control on the artwork, a hairline for progress under it.
+ * It is a span, not a button, because it lives inside the option button. */
+.play {
+  position: absolute; right: 8px; bottom: 8px;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--ink); color: var(--paper);
+  cursor: pointer;
+  opacity: 0.92;
+}
+.play:hover, .play:focus-visible { opacity: 1; outline: 2px solid var(--paper); outline-offset: -4px; }
+.play svg { width: 12px; height: 12px; fill: currentColor; }
+.play .stop-glyph { display: none; }
+.play.playing .play-glyph { display: none; }
+.play.playing .stop-glyph { display: block; }
+.play-progress {
+  position: absolute; left: 0; bottom: -6px;
+  height: 1px; width: 100%;
+  background: var(--line);
+}
+.play-progress::after {
+  content: ""; position: absolute; left: 0; top: 0; height: 100%;
+  width: calc(var(--p, 0) * 100%);
+  background: var(--ink);
+}
+.option-art:not(.has-progress) .play-progress { display: none; }
 
 /* ---------- modal ---------- */
 
@@ -427,8 +460,9 @@ kbd {
   .option { min-height: 170px; padding: 24px 10px; }
   .option-name { font-size: 17px; }
   .option-meta { font-size: 12px; }
-  .option-media { width: min(100%, 120px); }
+  .option-art { width: min(100%, 120px); }
   .option.has-media { padding-top: 34px; }
+  .play { width: 30px; height: 30px; right: 6px; bottom: 6px; }
   .winner-media { width: 84px; }
   .winner-rank { font-size: 32px; }
   .winner-name { font-size: 23px; }
