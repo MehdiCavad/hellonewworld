@@ -242,12 +242,12 @@ main { max-width: 900px; margin: 0 auto; padding: 20px var(--pad) 64px; }
 /* King of the hill: mark the side that is holding its place. */
 .option.is-champion { border-color: rgba(245, 196, 81, 0.45); }
 .option.is-champion::after {
-  content: "\1F451\00A0CHAMPION";
+  content: "👑 CHAMPION";
   position: absolute; top: 9px; right: 10px;
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   color: var(--gold);
 }
-@media (max-width: 380px) { .option.is-champion::after { content: "\1F451"; } }
+@media (max-width: 380px) { .option.is-champion::after { content: "👑"; } }
 .option-avatar {
   width: 62px; height: 62px;
   border-radius: 18px;
