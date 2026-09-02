@@ -1,7 +1,9 @@
 /* Seed catalogue.
  *
- * Items are written as "Name|meta|tier" to keep the file compact.
+ * Items are written as "Name|meta|tier[|wiki]" to keep the file compact.
  *   tier 1 = household names, 2 = well known, 3 = deeper cuts.
+ *   wiki   = the Wikipedia article title, only when it differs from the name
+ *            (e.g. "Parasite (2019 film)"). Used to look up a free image.
  * The level a player picks decides which tiers are unlocked, so a higher
  * level means both more items and more obscure ones.
  *
@@ -20,15 +22,15 @@
         'The Godfather|1972|1', 'The Shawshank Redemption|1994|1', 'Pulp Fiction|1994|1',
         'The Dark Knight|2008|1', 'Forrest Gump|1994|1', 'Inception|2010|1',
         'Fight Club|1999|1', 'The Matrix|1999|1', 'Goodfellas|1990|1',
-        'Titanic|1997|1', 'Interstellar|2014|1', 'Gladiator|2000|1',
-        'Schindler\'s List|1993|2', 'Se7en|1995|2', 'The Silence of the Lambs|1991|2',
-        'Saving Private Ryan|1998|2', 'The Departed|2006|2', 'Casablanca|1942|2',
-        'Parasite|2019|2', 'Whiplash|2014|2', 'The Prestige|2006|2',
-        'No Country for Old Men|2007|2', 'Django Unchained|2012|2', 'Léon: The Professional|1994|2',
+        'Titanic|1997|1|Titanic (1997 film)', 'Interstellar|2014|1|Interstellar (film)', 'Gladiator|2000|1|Gladiator (2000 film)',
+        'Schindler\'s List|1993|2', 'Se7en|1995|2|Seven (1995 film)', 'The Silence of the Lambs|1991|2|The Silence of the Lambs (film)',
+        'Saving Private Ryan|1998|2', 'The Departed|2006|2|The Departed', 'Casablanca|1942|2|Casablanca (film)',
+        'Parasite|2019|2|Parasite (2019 film)', 'Whiplash|2014|2|Whiplash (2014 film)', 'The Prestige|2006|2|The Prestige (film)',
+        'No Country for Old Men|2007|2|No Country for Old Men (film)', 'Django Unchained|2012|2', 'Léon: The Professional|1994|2',
         'Apocalypse Now|1979|3', 'Taxi Driver|1976|3', 'There Will Be Blood|2007|3',
-        'City of God|2002|3', 'Come and See|1985|3', 'Seven Samurai|1954|3',
-        'In the Mood for Love|2000|3', 'Stalker|1979|3', 'Andrei Rublev|1966|3',
-        'Paris, Texas|1984|3', 'The Hunt|2012|3', 'A Separation|2011|3'
+        'City of God|2002|3|City of God (2002 film)', 'Come and See|1985|3', 'Seven Samurai|1954|3',
+        'In the Mood for Love|2000|3', 'Stalker|1979|3|Stalker (1979 film)', 'Andrei Rublev|1966|3|Andrei Rublev (film)',
+        'Paris, Texas|1984|3|Paris, Texas (film)', 'The Hunt|2012|3|The Hunt (2012 film)', 'A Separation|2011|3'
       ]
     },
     actors: {
@@ -56,14 +58,14 @@
       items: [
         'Lionel Messi|Argentina|1', 'Cristiano Ronaldo|Portugal|1', 'Diego Maradona|Argentina|1',
         'Pelé|Brazil|1', 'Ronaldinho|Brazil|1', 'Zinedine Zidane|France|1',
-        'Ronaldo Nazário|Brazil|1', 'Johan Cruyff|Netherlands|1', 'Kylian Mbappé|France|1',
-        'Andrés Iniesta|Spain|2', 'Xavi Hernández|Spain|2', 'Franz Beckenbauer|Germany|2',
+        'Ronaldo Nazário|Brazil|1|Ronaldo (Brazilian footballer)', 'Johan Cruyff|Netherlands|1', 'Kylian Mbappé|France|1',
+        'Andrés Iniesta|Spain|2', 'Xavi Hernández|Spain|2|Xavi', 'Franz Beckenbauer|Germany|2',
         'Paolo Maldini|Italy|2', 'Thierry Henry|France|2', 'Roberto Baggio|Italy|2',
         'Michel Platini|France|2', 'Erling Haaland|Norway|2', 'Luka Modrić|Croatia|2',
         'Gerd Müller|Germany|2', 'Alfredo Di Stéfano|Argentina|2',
         'Garrincha|Brazil|3', 'Ferenc Puskás|Hungary|3', 'Lev Yashin|USSR|3',
         'Bobby Charlton|England|3', 'Romário|Brazil|3', 'George Best|N. Ireland|3',
-        'Socrates|Brazil|3', 'Marco van Basten|Netherlands|3'
+        'Socrates|Brazil|3|Sócrates (footballer)', 'Marco van Basten|Netherlands|3'
       ]
     },
     music: {
@@ -71,13 +73,13 @@
       emoji: '🎸',
       blurb: 'Bands and solo acts',
       items: [
-        'The Beatles|UK|1', 'Queen|UK|1', 'Pink Floyd|UK|1', 'Michael Jackson|USA|1',
-        'Led Zeppelin|UK|1', 'Bob Dylan|USA|1', 'Nirvana|USA|1', 'Radiohead|UK|1',
+        'The Beatles|UK|1', 'Queen|UK|1|Queen (band)', 'Pink Floyd|UK|1', 'Michael Jackson|USA|1',
+        'Led Zeppelin|UK|1', 'Bob Dylan|USA|1', 'Nirvana|USA|1|Nirvana (band)', 'Radiohead|UK|1',
         'The Rolling Stones|UK|1', 'Beyoncé|USA|1',
-        'David Bowie|UK|2', 'Prince|USA|2', 'Metallica|USA|2', 'Daft Punk|France|2',
+        'David Bowie|UK|2', 'Prince|USA|2|Prince (musician)', 'Metallica|USA|2', 'Daft Punk|France|2',
         'Kendrick Lamar|USA|2', 'Amy Winehouse|UK|2', 'Johnny Cash|USA|2',
         'Stevie Wonder|USA|2', 'Massive Attack|UK|2', 'Fleetwood Mac|UK/USA|2',
-        'Talking Heads|USA|3', 'Portishead|UK|3', 'Joy Division|UK|3',
+        'Talking Heads|USA|3', 'Portishead|UK|3|Portishead (band)', 'Joy Division|UK|3',
         'Nina Simone|USA|3', 'Aphex Twin|UK|3', 'Sigur Rós|Iceland|3',
         'Fela Kuti|Nigeria|3', 'Tom Waits|USA|3', 'Cocteau Twins|UK|3'
       ]
@@ -87,14 +89,14 @@
       emoji: '🍽️',
       blurb: 'Dishes worth arguing about',
       items: [
-        'Pizza|Italy|1', 'Sushi|Japan|1', 'Burger|USA|1', 'Pasta Carbonara|Italy|1',
-        'Kebab|Türkiye|1', 'Ramen|Japan|1', 'Tacos|Mexico|1', 'Fried Chicken|USA|1',
-        'Dumplings|China|1', 'Plov|Azerbaijan|1',
+        'Pizza|Italy|1', 'Sushi|Japan|1', 'Burger|USA|1|Hamburger', 'Pasta Carbonara|Italy|1|Carbonara',
+        'Kebab|Türkiye|1', 'Ramen|Japan|1', 'Tacos|Mexico|1|Taco', 'Fried Chicken|USA|1',
+        'Dumplings|China|1|Dumpling', 'Plov|Azerbaijan|1|Pilaf',
         'Dolma|Azerbaijan|2', 'Pad Thai|Thailand|2', 'Paella|Spain|2', 'Pho|Vietnam|2',
-        'Shawarma|Levant|2', 'Lasagna|Italy|2', 'Biryani|India|2', 'Khinkali|Georgia|2',
+        'Shawarma|Levant|2', 'Lasagna|Italy|2|Lasagne', 'Biryani|India|2', 'Khinkali|Georgia|2',
         'Bibimbap|South Korea|2', 'Falafel|Levant|2',
-        'Düşbərə|Azerbaijan|3', 'Qutab|Azerbaijan|3', 'Okonomiyaki|Japan|3',
-        'Ceviche|Peru|3', 'Injera with Doro Wat|Ethiopia|3', 'Poutine|Canada|3',
+        'Düşbərə|Azerbaijan|3|Dushbara', 'Qutab|Azerbaijan|3', 'Okonomiyaki|Japan|3',
+        'Ceviche|Peru|3', 'Injera with Doro Wat|Ethiopia|3|Doro wat', 'Poutine|Canada|3',
         'Borscht|Ukraine|3', 'Laksa|Malaysia|3'
       ]
     },
@@ -103,13 +105,13 @@
       emoji: '💻',
       blurb: 'Settle it once and for all',
       items: [
-        'Python|1991|1', 'JavaScript|1995|1', 'Java|1995|1', 'C|1972|1',
-        'C++|1985|1', 'TypeScript|2012|1', 'Go|2009|1', 'Rust|2010|1',
-        'C#|2000|1', 'SQL|1974|1',
-        'Kotlin|2011|2', 'Swift|2014|2', 'PHP|1995|2', 'Ruby|1995|2',
-        'Scala|2004|2', 'R|1993|2', 'Dart|2011|2', 'Bash|1989|2',
-        'Elixir|2011|3', 'Haskell|1990|3', 'Clojure|2007|3', 'Erlang|1986|3',
-        'OCaml|1996|3', 'Lisp|1958|3', 'Fortran|1957|3', 'Zig|2016|3',
+        'Python|1991|1|Python (programming language)', 'JavaScript|1995|1', 'Java|1995|1|Java (programming language)', 'C|1972|1|C (programming language)',
+        'C++|1985|1', 'TypeScript|2012|1', 'Go|2009|1|Go (programming language)', 'Rust|2010|1|Rust (programming language)',
+        'C#|2000|1|C Sharp (programming language)', 'SQL|1974|1',
+        'Kotlin|2011|2|Kotlin (programming language)', 'Swift|2014|2|Swift (programming language)', 'PHP|1995|2', 'Ruby|1995|2|Ruby (programming language)',
+        'Scala|2004|2|Scala (programming language)', 'R|1993|2|R (programming language)', 'Dart|2011|2|Dart (programming language)', 'Bash|1989|2|Bash (Unix shell)',
+        'Elixir|2011|3|Elixir (programming language)', 'Haskell|1990|3', 'Clojure|2007|3', 'Erlang|1986|3|Erlang (programming language)',
+        'OCaml|1996|3', 'Lisp|1958|3|Lisp (programming language)', 'Fortran|1957|3', 'Zig|2016|3|Zig (programming language)',
         'Prolog|1972|3', 'Smalltalk|1972|3'
       ]
     },
@@ -118,15 +120,15 @@
       emoji: '🌍',
       blurb: 'Where would you rather be',
       items: [
-        'Tokyo|Japan|1', 'Paris|France|1', 'New York|USA|1', 'London|UK|1',
+        'Tokyo|Japan|1', 'Paris|France|1', 'New York|USA|1|New York City', 'London|UK|1',
         'Rome|Italy|1', 'Istanbul|Türkiye|1', 'Barcelona|Spain|1', 'Dubai|UAE|1',
         'Baku|Azerbaijan|1', 'Singapore|Singapore|1',
         'Lisbon|Portugal|2', 'Prague|Czechia|2', 'Vienna|Austria|2', 'Seoul|South Korea|2',
         'Amsterdam|Netherlands|2', 'Copenhagen|Denmark|2', 'Kyoto|Japan|2',
         'Tbilisi|Georgia|2', 'Marrakesh|Morocco|2', 'Buenos Aires|Argentina|2',
-        'Sheki|Azerbaijan|3', 'Valparaíso|Chile|3', 'Tallinn|Estonia|3',
+        'Sheki|Azerbaijan|3|Shaki, Azerbaijan', 'Valparaíso|Chile|3', 'Tallinn|Estonia|3',
         'Hanoi|Vietnam|3', 'Ljubljana|Slovenia|3', 'Bergen|Norway|3',
-        'Samarkand|Uzbekistan|3', 'Cartagena|Colombia|3'
+        'Samarkand|Uzbekistan|3', 'Cartagena|Colombia|3|Cartagena, Colombia'
       ]
     },
     series: {
@@ -135,14 +137,14 @@
       blurb: 'Binge-worthy or overrated',
       items: [
         'Breaking Bad|2008|1', 'Game of Thrones|2011|1', 'The Sopranos|1999|1',
-        'The Wire|2002|1', 'Friends|1994|1', 'Chernobyl|2019|1',
-        'Stranger Things|2016|1', 'Sherlock|2010|1', 'The Office (US)|2005|1',
-        'True Detective|2014|2', 'Better Call Saul|2015|2', 'Fargo|2014|2',
-        'Mr. Robot|2015|2', 'Peaky Blinders|2013|2', 'Dark|2017|2',
-        'Band of Brothers|2001|2', 'Succession|2018|2', 'The Crown|2016|2',
-        'The Leftovers|2014|3', 'Twin Peaks|1990|3', 'Deadwood|2004|3',
-        'Six Feet Under|2001|3', 'Rectify|2013|3', 'The Bureau|2015|3',
-        'Babylon Berlin|2017|3', 'Halt and Catch Fire|2014|3'
+        'The Wire|2002|1', 'Friends|1994|1', 'Chernobyl|2019|1|Chernobyl (miniseries)',
+        'Stranger Things|2016|1', 'Sherlock|2010|1|Sherlock (TV series)', 'The Office (US)|2005|1|The Office (American TV series)',
+        'True Detective|2014|2', 'Better Call Saul|2015|2', 'Fargo|2014|2|Fargo (TV series)',
+        'Mr. Robot|2015|2', 'Peaky Blinders|2013|2', 'Dark|2017|2|Dark (TV series)',
+        'Band of Brothers|2001|2|Band of Brothers (miniseries)', 'Succession|2018|2|Succession (TV series)', 'The Crown|2016|2|The Crown (TV series)',
+        'The Leftovers|2014|3|The Leftovers (TV series)', 'Twin Peaks|1990|3', 'Deadwood|2004|3|Deadwood (TV series)',
+        'Six Feet Under|2001|3|Six Feet Under (TV series)', 'Rectify|2013|3', 'The Bureau|2015|3|The Bureau (TV series)',
+        'Babylon Berlin|2017|3', 'Halt and Catch Fire|2014|3|Halt and Catch Fire (TV series)'
       ]
     }
   };
@@ -168,7 +170,8 @@
       id: topicId + ':' + slug(name) + ':' + index,
       name: name,
       meta: (parts[1] || '').trim(),
-      tier: Number(parts[2]) || 1
+      tier: Number(parts[2]) || 1,
+      wiki: (parts[3] || '').trim()
     };
   }
 
@@ -196,7 +199,8 @@
           id: id + ':' + slug(bits[0]) + ':' + i,
           name: bits[0].trim(),
           meta: (bits[1] || '').trim(),
-          tier: 1
+          tier: 1,
+          wiki: (bits[2] || '').trim()
         };
       });
     return {

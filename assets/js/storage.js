@@ -13,6 +13,7 @@
   var KEY_SESSIONS = PREFIX + 'sessions';
   var KEY_TOPICS = PREFIX + 'topics';
   var KEY_PREFS = PREFIX + 'prefs';
+  var KEY_MEDIA = PREFIX + 'media';
   var MAX_SESSIONS = 60;
 
   var memory = {};
@@ -108,8 +109,19 @@
     return next;
   }
 
+  function mediaCache() {
+    var value = read(KEY_MEDIA, {});
+    return value && typeof value === 'object' ? value : {};
+  }
+
+  function saveMediaCache(cache) {
+    write(KEY_MEDIA, cache);
+  }
+
   var Storage = {
     persistent: available,
+    mediaCache: mediaCache,
+    saveMediaCache: saveMediaCache,
     allSessions: allSessions,
     getSession: getSession,
     saveSession: saveSession,

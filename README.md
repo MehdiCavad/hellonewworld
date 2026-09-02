@@ -34,6 +34,23 @@ also means it drops straight into a mobile WebView if you want to ship it as an 
    record, CSV export and a copy-the-top-10 button. Everything is saved, so you
    can leave mid-session and come back, or refine a finished ranking further.
 
+## Photos
+
+Options show a photo where a freely licensed one exists. Images come from
+Wikimedia Commons via Wikipedia's `pageimages` API — one batched request per
+session, no API key, cached in the browser for 30 days. Only Commons-hosted
+files are used, because those carry free licences; film posters and album
+covers are usually non-free files kept on en.wikipedia, so most films stay
+text-only. Set `Media.config.freeOnly = false` in `assets/js/media.js` to use
+them anyway, at your own licensing risk. On the results page each option's
+name links to its Wikipedia article as attribution.
+
+Where a name is ambiguous, the catalogue carries the article title as a fourth
+field (`Parasite|2019|2|Parasite (2019 film)`); custom topics accept the same
+after a second `|`. Everything degrades to the plain text card when the lookup
+fails or the network is unavailable — images are never on the ranking's
+critical path.
+
 ## How the ranking is computed
 
 The naive approach — count wins — is bad: beating the weakest option counts the

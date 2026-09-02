@@ -50,6 +50,9 @@
       <p><strong>How it works.</strong> Every answer updates a Bradley–Terry model of
       how strong each option is, and the next pair you see is the one the model is
       least sure about. That is why a few dozen taps can order a few dozen items.</p>
+      <p>Photos come from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>
+      via Wikipedia and are shown only where a freely licensed one exists; on the results
+      page, an option's name links to its article.</p>
       <p class="tiny" id="storageNote"></p>
     </footer>
   </section>
@@ -131,7 +134,7 @@
       <input type="text" id="topicEmoji" placeholder="⭐" maxlength="4">
     </label>
     <label class="field">
-      <span>Options — one per line. Add a detail after a <code>|</code> if you like.</span>
+      <span>Options — one per line. Add a detail after a <code>|</code>, and a Wikipedia title after a second <code>|</code> if the name is ambiguous.</span>
       <textarea id="topicItems" rows="9" placeholder="OK Computer|Radiohead&#10;Nevermind|Nirvana&#10;Illmatic|Nas"></textarea>
     </label>
     <p class="field-error" id="topicError" hidden></p>
@@ -147,6 +150,7 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/engine.js"></script>
 <script src="assets/js/storage.js"></script>
+<script src="assets/js/media.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

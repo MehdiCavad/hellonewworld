@@ -321,4 +321,78 @@ test('custom topics parse names, optional meta and blank lines', function () {
   assert.strictEqual(topic.builtIn, false);
 });
 
-console.log('\n' + passed + ' tests passed');
+
+/* Media lookup — the pure parts; the network is exercised in the browser. */
+var Media = require(path.join(__dirname, '..', 'assets', 'js', 'media.js'));
+
+test('media looks items up by their wiki title when one is set', function () {
+  assert.strictEqual(Media.titleOf({ name: 'Parasite', wiki: 'Parasite (2019 film)' }), 'Parasite (2019 film)');
+  assert.strictEqual(Media.titleOf({ name: 'Lionel Messi', wiki: '' }), 'Lionel Messi');
+});
+
+test('media only accepts Commons-hosted images', function () {
+  assert.ok(Media.isFree('https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/X.jpg/640px-X.jpg'));
+  assert.ok(!Media.isFree('https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Poster.jpg/640px-Poster.jpg'),
+    'a poster kept locally on en.wikipedia is usually non-free');
+});
+
+test('media request batches titles into one CORS-enabled API call', function () {
+  var url = Media.requestUrl(['Lionel Messi', 'Pelé']);
+  assert.ok(url.indexOf('https://en.wikipedia.org/w/api.php?') === 0);
+  assert.ok(url.indexOf('origin=*') !== -1, 'origin=* is what makes the API answer cross-origin');
+  assert.ok(url.indexOf('redirects=1') !== -1);
+  assert.ok(url.indexOf('titles=' + encodeURIComponent('Lionel Messi|Pelé')) !== -1);
+});
+
+test('media follows normalisation and redirects back to the requested title', function () {
+  var json = { query: {
+    normalized: [{ from: 'xavi', to: 'Xavi' }],
+    redirects: [{ from: 'Xavi', to: 'Xavi (footballer)' }],
+    pages: [
+      { title: 'Xavi (footballer)', thumbnail: { source: 'https://upload.wikimedia.org/wikipedia/commons/x/xa/Xavi.jpg' } },
+      { title: 'Parasite (2019 film)', thumbnail: { source: 'https://upload.wikimedia.org/wikipedia/en/p/pa/Poster.jpg' } },
+      { title: 'Nobody Here', missing: true }
+    ]
+  } };
+  var out = Media.parseResponse(json, ['xavi', 'Parasite (2019 film)', 'Nobody Here']);
+  assert.strictEqual(out['xavi'].url, 'https://upload.wikimedia.org/wikipedia/commons/x/xa/Xavi.jpg');
+  assert.strictEqual(out['xavi'].page, 'Xavi (footballer)', 'attribution points at the final article');
+  assert.strictEqual(out['Parasite (2019 film)'].url, null, 'non-free poster is dropped');
+  assert.strictEqual(out['Parasite (2019 film)'].page, 'Parasite (2019 film)', 'but the article link stays');
+  assert.strictEqual(out['Nobody Here'].url, null);
+  assert.strictEqual(out['Nobody Here'].page, null);
+});
+
+test('media get() is cache-only and honours the 30-day expiry', function () {
+  Media._reset();
+  var store = {};
+  global.Storage = {
+    mediaCache: function () { return store; },
+    saveMediaCache: function (c) { store = c; }
+  };
+  store['Fresh'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/F.jpg', page: 'Fresh', ts: Date.now() };
+  store['Stale'] = { url: 'https://upload.wikimedia.org/wikipedia/commons/s/s1/S.jpg', page: 'Stale', ts: Date.now() - 31 * 86400000 };
+  assert.strictEqual(Media.get({ name: 'Fresh' }), store['Fresh'].url);
+  assert.strictEqual(Media.get({ name: 'Stale' }), null, 'expired entries are treated as absent');
+  assert.strictEqual(Media.get({ name: 'Unknown' }), null);
+  assert.strictEqual(Media.pageUrl({ name: 'Fresh' }), 'https://en.wikipedia.org/wiki/Fresh');
+  assert.strictEqual(Media.prefetch([{ name: 'Fresh' }]), 0, 'without fetch() prefetch is a no-op');
+  delete global.Storage;
+  Media._reset();
+});
+
+test('sessions carry the wiki title so a resumed session can still find images', function () {
+  var s = Engine.createSession({
+    topicId: 't', topicName: 'T', levelId: 'x', levelName: 'X', targetRounds: 5,
+    items: [{ id: 'a', name: 'Parasite', wiki: 'Parasite (2019 film)' }, { id: 'b', name: 'Pelé' }]
+  });
+  assert.strictEqual(s.items.a.wiki, 'Parasite (2019 film)');
+  assert.strictEqual(s.items.b.wiki, '');
+  /* The results screen reads standings rows, not session items, so the title
+   * has to survive that hop too or half the table silently loses its images. */
+  var rows = Engine.standings(s);
+  var parasite = rows.filter(function (r) { return r.id === 'a'; })[0];
+  assert.strictEqual(parasite.wiki, 'Parasite (2019 film)');
+});
+
+console.log('\n' + passed + ' tests passed (incl. media)');

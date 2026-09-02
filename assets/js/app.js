@@ -208,10 +208,12 @@
   }
 
   function renderOption(node, item, key) {
-    node.className = 'option';
+    var media = Media.get(item);
+    node.className = 'option' + (media ? ' has-media' : '');
     node.dataset.id = item.id;
     node.innerHTML =
       '<span class="option-key">' + key + '</span>' +
+      (media ? '<img class="option-media" src="' + escapeHtml(media) + '" alt="" loading="eager">' : '') +
       '<span class="option-name">' + escapeHtml(item.name) + '</span>' +
       (item.meta ? '<span class="option-meta">' + escapeHtml(item.meta) + '</span>' : '');
   }
@@ -276,12 +278,16 @@
       plural(rows.length, 'option') + ' · ' + plural(session.history.length, 'comparison') + '</span></span>';
 
     var winner = rows[0];
+    var winnerMedia = Media.get(winner);
     el('podium').innerHTML = '<div class="winner">' +
+      (winnerMedia ? '<img class="winner-media" src="' + escapeHtml(winnerMedia) + '" alt="">' : '') +
       '<span class="winner-rank">1</span>' +
-      '<span class="winner-name">' + escapeHtml(winner.name) + '</span>' +
-      (winner.meta ? '<span class="winner-meta">' + escapeHtml(winner.meta) + '</span>' : '') +
-      '<span class="winner-record">' + winner.wins + ' won · ' + winner.losses + ' lost' +
-        (winner.ties ? ' · ' + winner.ties + ' tied' : '') + '</span>' +
+      '<span class="winner-body">' +
+        '<span class="winner-name">' + escapeHtml(winner.name) + '</span>' +
+        (winner.meta ? '<span class="winner-meta">' + escapeHtml(winner.meta) + '</span>' : '') +
+        '<span class="winner-record">' + winner.wins + ' won · ' + winner.losses + ' lost' +
+          (winner.ties ? ' · ' + winner.ties + ' tied' : '') + '</span>' +
+      '</span>' +
       '</div>';
 
     var top = rows[0].rating;
@@ -296,10 +302,18 @@
         var flag = row.confidence < 0.5
           ? '<span class="low-conf" title="Seen in only ' + plural(row.played, 'comparison') + '">low data</span>'
           : '';
+        var media = Media.get(row);
+        var page = Media.pageUrl(row);
+        var name = page
+          ? '<a href="' + escapeHtml(page) + '" target="_blank" rel="noopener">' + escapeHtml(row.name) + '</a>'
+          : escapeHtml(row.name);
         return '<tr>' +
           '<td class="rank">' + row.rank + '</td>' +
-          '<td class="name"><b>' + escapeHtml(row.name) + '</b>' + flag +
-            (row.meta ? '<span>' + escapeHtml(row.meta) + '</span>' : '') + '</td>' +
+          '<td class="name"><div class="name-cell">' +
+            (media ? '<img class="thumb" src="' + escapeHtml(media) + '" alt="" loading="lazy">' : '') +
+            '<div><b>' + name + '</b>' + flag +
+            (row.meta ? '<span class="meta">' + escapeHtml(row.meta) + '</span>' : '') + '</div>' +
+          '</div></td>' +
           '<td><div class="bar" style="width:' + width + '%"></div></td>' +
           '<td class="num">' + row.wins + '–' + row.losses + '–' + row.ties + '</td>' +
           '<td class="num">' + Math.round(row.winRate * 100) + '%</td>' +
@@ -437,6 +451,7 @@
       var session = Storage.getSession(parts[1]);
       if (!session) return go('#/');
       state.session = session;
+      Media.prefetch(session.order.map(function (id) { return session.items[id]; }));
       if (parts[0] === 'play') {
         if (session.finished) return go('#/result/' + session.id);
         show('arena');
@@ -507,6 +522,11 @@
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKeydown);
     window.addEventListener('hashchange', render);
+    Media.onChange(function () {
+      if (!state.session) return;
+      if (!el('screen-arena').hidden) renderArena();
+      else if (!el('screen-results').hidden) renderResults();
+    });
 
     el('backBtn').addEventListener('click', function () {
       if (history.length > 1) history.back();
