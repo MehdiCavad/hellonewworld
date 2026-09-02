@@ -21,26 +21,6 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function hash(text) {
-    var h = 0;
-    for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
-    return Math.abs(h);
-  }
-
-  /* A stable colour and monogram per name, so options stay recognisable
-   * without shipping any images. */
-  function avatar(name) {
-    var seed = hash(name);
-    var hue = seed % 360;
-    var initials = name.split(/\s+/).slice(0, 2).map(function (word) {
-      return word.charAt(0);
-    }).join('').toUpperCase();
-    return {
-      style: 'background: linear-gradient(140deg, hsl(' + hue + ' 70% 62%), hsl(' + ((hue + 48) % 360) + ' 72% 52%));',
-      initials: initials || '?'
-    };
-  }
-
   function allTopics() {
     return Data.topics.concat(Storage.customTopics());
   }
@@ -228,12 +208,10 @@
   }
 
   function renderOption(node, item, key) {
-    var art = avatar(item.name);
     node.className = 'option';
     node.dataset.id = item.id;
     node.innerHTML =
       '<span class="option-key">' + key + '</span>' +
-      '<span class="option-avatar" style="' + art.style + '">' + escapeHtml(art.initials) + '</span>' +
       '<span class="option-name">' + escapeHtml(item.name) + '</span>' +
       (item.meta ? '<span class="option-meta">' + escapeHtml(item.meta) + '</span>' : '');
   }
@@ -297,15 +275,14 @@
       '<span class="head-sub">' + escapeHtml(session.levelName) + ' · ' +
       plural(rows.length, 'option') + ' · ' + plural(session.history.length, 'comparison') + '</span></span>';
 
-    var medals = ['🥇', '🥈', '🥉'];
-    el('podium').innerHTML = rows.slice(0, 3).map(function (row, index) {
-      return '<div class="podium-card p' + (index + 1) + '">' +
-        '<div class="podium-medal">' + medals[index] + '</div>' +
-        '<div class="podium-name">' + escapeHtml(row.name) + '</div>' +
-        (row.meta ? '<div class="podium-meta">' + escapeHtml(row.meta) + '</div>' : '') +
-        '<div class="podium-score">' + row.wins + 'W · ' + row.losses + 'L</div>' +
-        '</div>';
-    }).join('');
+    var winner = rows[0];
+    el('podium').innerHTML = '<div class="winner">' +
+      '<span class="winner-rank">1</span>' +
+      '<span class="winner-name">' + escapeHtml(winner.name) + '</span>' +
+      (winner.meta ? '<span class="winner-meta">' + escapeHtml(winner.meta) + '</span>' : '') +
+      '<span class="winner-record">' + winner.wins + ' won · ' + winner.losses + ' lost' +
+        (winner.ties ? ' · ' + winner.ties + ' tied' : '') + '</span>' +
+      '</div>';
 
     var top = rows[0].rating;
     var bottom = rows[rows.length - 1].rating;
