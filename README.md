@@ -25,8 +25,10 @@ also means it drops straight into a mobile WebView if you want to ship it as an 
 
 3. **Choose a style** — *Smart duels* (the app picks the pair it is least sure
    about) or *King of the hill* (your winner stays on and defends against a new
-   challenger, the flow you described).
-4. **Compare** — two options at a time. You can also call a tie, skip a pair you
+   challenger, the flow you described). In King of the hill the champion holds
+   the same slot on screen and only the challenger swaps in, so you can keep
+   your eye on the title that is winning.
+4. **Compare** — two options side by side, at every screen size. You can also call a tie, skip a pair you
    have no opinion on, or undo the last answer.
 5. **Get your ranking** — podium, full table with relative strength, win/loss
    record, CSV export and a copy-the-top-10 button. Everything is saved, so you

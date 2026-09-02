@@ -141,6 +141,50 @@ test('gauntlet mode keeps the winner on screen', function () {
   }
 });
 
+test('king of the hill freezes the champion on the side it already holds', function () {
+  var s = newSession(10, { mode: 'gauntlet', targetRounds: 30 });
+  /* Win from the left, then from whichever slot the champion is parked in. */
+  var champion = s.current[0];
+  var side = 0;
+  Engine.submit(s, champion);
+  for (var i = 0; i < 12; i++) {
+    assert.strictEqual(s.current[side], champion,
+      'round ' + i + ': champion should still hold slot ' + side);
+    assert.notStrictEqual(s.current[1 - side], champion, 'champion must not fill both slots');
+    Engine.submit(s, champion);          // champion keeps winning, keeps its seat
+  }
+  /* When the challenger wins it takes over that same seat. */
+  var challenger = s.current[1 - side];
+  Engine.submit(s, challenger);
+  assert.strictEqual(s.current[1 - side], challenger,
+    'a new champion holds the slot it won from');
+});
+
+test('undo restores the exact left/right layout of the previous pair', function () {
+  var s = newSession(10, { mode: 'gauntlet', targetRounds: 30 });
+  Engine.submit(s, s.current[0]);
+  var pair = s.current.slice();
+  Engine.submit(s, s.current[1]);
+  Engine.undo(s);
+  assert.deepStrictEqual(s.current, pair, 'sides must come back in the same order');
+});
+
+test('smart duels still vary which side an item appears on', function () {
+  var s = newSession(12, { targetRounds: 80 });
+  var sides = {};
+  for (var i = 0; i < 60 && s.current; i++) {
+    s.current.forEach(function (id, index) {
+      (sides[id] = sides[id] || {})[index] = true;
+    });
+    Engine.submit(s, s.current[0]);
+  }
+  var bothSides = Object.keys(sides).filter(function (id) {
+    return sides[id][0] && sides[id][1];
+  });
+  assert.ok(bothSides.length >= 8,
+    'most items should be seen on both sides, got ' + bothSides.length);
+});
+
 test('skip swaps the pair without recording a result', function () {
   var s = newSession(10);
   var first = s.current.slice();

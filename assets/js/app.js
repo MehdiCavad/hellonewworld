@@ -210,6 +210,14 @@
     renderOption(el('optionA'), session.items[session.current[0]], '←');
     renderOption(el('optionB'), session.items[session.current[1]], '→');
 
+    /* In king of the hill the champion holds its slot, so flag which card is
+     * the one staying put. renderOption resets className, so this comes after. */
+    if (session.mode === 'gauntlet' && session.champion) {
+      [el('optionA'), el('optionB')].forEach(function (node) {
+        if (node.dataset.id === session.champion) node.classList.add('is-champion');
+      });
+    }
+
     el('undoBtn').disabled = session.history.length === 0;
     el('finishBtn').disabled = session.history.length < 3;
 

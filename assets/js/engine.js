@@ -218,6 +218,16 @@
     var shortlist = pairs.filter(function (p) { return p.cost <= best + 40; }).slice(0, 3);
     var chosen = shortlist[Math.floor(random() * shortlist.length)];
 
+    /* King of the hill: the reigning pick holds the slot it already occupies,
+     * so it visibly stays put and only the challenger swaps in. That trades
+     * away side randomisation for the champion, which is the point of the
+     * mode — smart duels below keep it. */
+    if (champion) {
+      var challenger = chosen.a === champion ? chosen.b : chosen.a;
+      var heldSide = session.current ? session.current.indexOf(champion) : -1;
+      return heldSide === 1 ? [challenger, champion] : [champion, challenger];
+    }
+
     /* Randomise which side each item shows on, so position bias does not
      * quietly become part of the ranking. */
     return random() < 0.5 ? [chosen.a, chosen.b] : [chosen.b, chosen.a];
