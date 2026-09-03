@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "test": "node tests/engine.test.js",
-    "start": "npx --yes http-server . -p 8080 -o"
+    "start": "npx --yes http-server . -p 8080 -o",
+    "build": "node scripts/build.js"
   },
   "license": "MIT"
 }

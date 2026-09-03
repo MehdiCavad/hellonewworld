@@ -141,3 +141,19 @@ The pieces are arranged so none of these require a rewrite:
 - **Images.** Options currently render as generated monogram tiles so the app
   stays offline and dependency-free. Adding a poster or photo URL per item is a
   change to `renderOption` alone.
+
+## Build
+
+There is nothing to build to run the site: `index.html` plus `assets/` is the
+deployment, and GitHub Pages serves it as is. `npm run build` is for the other
+way to ship it — one self-contained file:
+
+```
+npm run build            # dist/rankd.html — the whole app in one file
+```
+
+The result runs from a double-click, a USB stick, an email attachment, or the
+WebView of a mobile shell such as Capacitor or Cordova, with no server and no
+relative paths. It is the source inlined, not minified, so it stays debuggable.
+`node scripts/build.js --no-download` also removes the CSV button, for sandboxes
+that block page-initiated downloads.
