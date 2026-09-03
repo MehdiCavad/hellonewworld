@@ -1,0 +1,12 @@
+{
+  "name": "rankd",
+  "version": "1.0.0",
+  "description": "Rank anything by comparing two options at a time",
+  "private": true,
+  "scripts": {
+    "test": "node tests/engine.test.js",
+    "start": "npx --yes http-server . -p 8080 -o",
+    "build": "node scripts/build.js"
+  },
+  "license": "MIT"
+}

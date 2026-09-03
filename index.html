@@ -1,4 +1,156 @@
-<html>
-<h1> This is my first page with GitHub Pages </h1>
-<p>Thanks GitHub!</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d13">
+<meta name="description" content="Rank anything by choosing between two options at a time. Pick a topic, pick a difficulty level, and get your personal ranking.">
+<title>Rankd — rank anything, two at a time</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="back-btn" id="backBtn" hidden aria-label="Go back">←</button>
+  <a class="brand" href="#/" aria-label="Rankd home">
+    <span class="brand-mark">🏆</span>
+    <span class="brand-name">Rankd</span>
+  </a>
+  <span class="topbar-slot" id="topbarSlot"></span>
+</header>
+
+<main id="app">
+
+  <!-- ============ HOME ============ -->
+  <section class="screen" id="screen-home">
+    <div class="hero">
+      <h1>Rank anything,<br><span class="grad">two at a time</span></h1>
+      <p class="lede">You never rate anything out of ten. You just answer
+        <em>this one or that one?</em> — and a full ranking falls out the other end.</p>
+    </div>
+
+    <div class="section" id="resumeSection" hidden>
+      <h2 class="section-title">Pick up where you left off</h2>
+      <div class="stack" id="resumeList"></div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Choose a topic</h2>
+      <div class="grid" id="topicGrid"></div>
+      <button class="btn ghost wide" id="newTopicBtn">＋ Create your own topic</button>
+    </div>
+
+    <div class="section" id="resultsSection" hidden>
+      <h2 class="section-title">Your rankings</h2>
+      <div class="stack" id="resultsList"></div>
+    </div>
+
+    <footer class="page-foot">
+      <p><strong>How it works.</strong> Every answer updates a Bradley–Terry model of
+      how strong each option is, and the next pair you see is the one the model is
+      least sure about. That is why a few dozen taps can order a few dozen items.</p>
+      <p>Photos come from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>
+      via Wikipedia and are shown only where a freely licensed one exists; on the results
+      page, an option's name links to its article.</p>
+      <p class="tiny" id="storageNote"></p>
+    </footer>
+  </section>
+
+  <!-- ============ LEVEL ============ -->
+  <section class="screen" id="screen-level" hidden>
+    <div class="topic-head" id="levelHead"></div>
+    <h2 class="section-title">Choose your level</h2>
+    <p class="section-note">The level sets how many options enter the ranking and how
+      deep the catalogue goes — higher levels bring in names only real fans will know.</p>
+    <div class="grid levels" id="levelGrid"></div>
+
+    <h2 class="section-title">Comparison style</h2>
+    <div class="modes" id="modeGrid"></div>
+
+    <button class="btn primary wide big" id="startBtn">Start ranking</button>
+  </section>
+
+  <!-- ============ ARENA ============ -->
+  <section class="screen arena" id="screen-arena" hidden>
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span id="roundLabel">Round 1</span>
+        <span id="coverageLabel"></span>
+      </div>
+      <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+
+    <p class="prompt" id="promptLabel">Which one is better?</p>
+
+    <div class="duel" id="duel">
+      <button class="option" id="optionA" type="button"></button>
+      <span class="versus">VS</span>
+      <button class="option" id="optionB" type="button"></button>
+    </div>
+
+    <div class="arena-actions">
+      <button class="btn ghost" id="tieBtn">Too close to call</button>
+      <button class="btn ghost" id="skipBtn">Skip this pair</button>
+      <button class="btn ghost" id="undoBtn">Undo</button>
+      <button class="btn ghost danger" id="finishBtn">Finish early</button>
+    </div>
+
+    <details class="peek" id="peek">
+      <summary>Standing so far</summary>
+      <ol class="peek-list" id="peekList"></ol>
+    </details>
+
+    <p class="tiny keys">Keyboard: <kbd>←</kbd>/<kbd>→</kbd> choose · <kbd>space</kbd> tie · <kbd>s</kbd> skip · <kbd>u</kbd> undo</p>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section class="screen" id="screen-results" hidden>
+    <div class="topic-head" id="resultHead"></div>
+    <div class="podium" id="podium"></div>
+    <div class="table-wrap"><table class="table" id="resultTable"></table></div>
+    <div class="result-actions">
+      <button class="btn primary" id="refineBtn">Refine further</button>
+      <button class="btn" id="copyBtn">Copy top 10</button>
+      <button class="btn" id="csvBtn">Download CSV</button>
+      <button class="btn ghost" id="againBtn">Rank again</button>
+      <button class="btn ghost danger" id="deleteBtn">Delete</button>
+    </div>
+    <p class="tiny" id="resultNote"></p>
+  </section>
+
+</main>
+
+<!-- ============ CUSTOM TOPIC DIALOG ============ -->
+<div class="modal" id="topicModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Create a topic</h2>
+    <label class="field">
+      <span>Topic name</span>
+      <input type="text" id="topicName" placeholder="e.g. Best albums of the 90s" maxlength="60">
+    </label>
+    <label class="field">
+      <span>Icon</span>
+      <input type="text" id="topicEmoji" placeholder="⭐" maxlength="4">
+    </label>
+    <label class="field">
+      <span>Options — one per line. Add a detail after a <code>|</code>, and a Wikipedia title after a second <code>|</code> if the name is ambiguous.</span>
+      <textarea id="topicItems" rows="9" placeholder="OK Computer|Radiohead&#10;Nevermind|Nirvana&#10;Illmatic|Nas"></textarea>
+    </label>
+    <p class="field-error" id="topicError" hidden></p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelTopicBtn">Cancel</button>
+      <button class="btn primary" id="saveTopicBtn">Create topic</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/storage.js"></script>
+<script src="assets/js/media.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
 </html>
