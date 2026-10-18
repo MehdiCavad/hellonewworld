@@ -1,26 +1,35 @@
 # Rankd — Concept Plan & Project Scope
 
-**Mobile app (Flutter) · Backend (.NET) · Licensed media catalogue**
+**Mobile app (Flutter) · .NET Core Web API · Microsoft SQL Server**
 
 | | |
 |---|---|
-| **Document** | Concept plan and scope, v0.1 (draft for review) |
+| **Document** | Concept plan and scope, v0.2 (draft for review) |
 | **Date** | 18 October 2026 |
 | **Owner** | Mehdi Javadov |
 | **Status** | For decision: open questions in §17 must be answered before build starts |
 | **Reference** | Working web prototype: <https://mehdicavad.github.io/hellonewworld/> |
 
+### Change log
+
+| Version | Change |
+|---|---|
+| v0.1 | First draft |
+| v0.2 | Backend fixed as an ASP.NET Core Web API on **Microsoft SQL Server**. **Removed from this phase:** cloud hosting providers, CI/CD, and authentication / user accounts. Architecture, requirements, team, plan, costs and risks updated to match |
+
 ---
 
 ## 1. Executive summary
 
-Rankd lets people rank anything by answering one question over and over: *this one or that one?* The user picks a topic (movies, actors, footballers, songs, food, cities, and more) and a depth level. They then compare pairs of rich media cards — a film poster, an actor's photo, a song's 30-second preview — and finish with a full personal ranking. Every user's answers also feed a **global community ranking** per topic.
+Rankd lets people rank anything by answering one question over and over: *this one or that one?* The user picks a topic (movies, actors, footballers, songs, food, cities, and more) and a depth level. They then compare pairs of rich media cards — a film poster, an actor's photo, a song's 30-second preview — and finish with a full personal ranking. All users' answers also feed a **global community ranking** per topic.
 
 A working web prototype already exists and proves the core mechanics. It includes the ranking model, adaptive pairing, levels, two game modes, media and a minimal design, with 39 automated tests. This project turns that prototype into a production product:
 
 - a **Flutter** app for iOS and Android;
-- a **.NET** backend for accounts, sync and global rankings;
+- an **ASP.NET Core Web API** (.NET 10) with **Microsoft SQL Server** as the database;
 - a **content pipeline** that sources metadata and media from providers we are licensed to use.
+
+This phase deliberately stays lean: **no cloud hosting provider, no CI/CD pipeline and no user authentication.** The API and SQL Server run on a server we manage ourselves, and the app is used anonymously.
 
 The engineering is conventional. **The critical path is content licensing.** Posters, celebrity photos and music previews are copyrighted, and the terms differ by provider and by whether the app is commercial. Those decisions must be made in the first two weeks, before any media code is written.
 
@@ -45,9 +54,10 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 | **Topic** | A themed catalogue: Movies, TV Series, Actors, Footballers, Music Artists, Songs, Food, Cities, Programming Languages, user-created lists |
 | **Level** | Sets pool size and depth of the catalogue. *Casual* (8 household names), *Standard* (16), *Expert* (24 including deep cuts), *Marathon* (whole topic) |
 | **Mode** | *Smart duels*: the app serves the pair it is least sure about (fewest taps, sharpest ranking). *King of the hill*: the winner stays on screen and defends against new challengers |
-| **Personal ranking** | One user's ordered list for a topic, with strength and win/loss record |
-| **Global ranking** | All users' comparisons combined into one community ordering per topic |
+| **Personal ranking** | One device's ordered list for a topic, with strength and win/loss record |
+| **Global ranking** | All devices' comparisons combined into one community ordering per topic |
 | **Media card** | Option name and detail, plus image (poster, photo or cover) and, for songs, a playable 30-second preview |
+| **Device ID** | A random identifier the app creates on first launch. It replaces user accounts: it groups a device's sessions on the server, and it carries no personal details |
 
 ### 2.4 Rules that make it feel fair
 
@@ -66,7 +76,7 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 | Rankings are trustworthy | Rank error vs. known order in simulation (existing test) | ≤ 1 position at 10 % noisy answers |
 | Media feels rich | Cards shown with an image | ≥ 90 % for posters and photos |
 | Reliable app | Crash-free sessions | ≥ 99.5 % |
-| Fast backend | API p95 latency | < 300 ms |
+| Fast backend | API p95 latency on our server | < 300 ms |
 | Licensing hygiene | Assets with a recorded licence and source | 100 % |
 | Takedown readiness | Time to remove a disputed asset | < 1 hour, no app release needed |
 
@@ -78,7 +88,7 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 |---|---|---|
 | **The casual player** | A few minutes of light fun | Fast taps, beautiful cards, a shareable result |
 | **The enthusiast** | A definitive "my top 50 films" | Expert and Marathon depth, refine further, accuracy |
-| **The social sharer** | Start debates with friends | Share cards, compare with the community and friends |
+| **The social sharer** | Start debates with friends | Share cards, compare with the community |
 | **The curator** (Phase 2) | Rank a personal list (albums, local restaurants) | Custom topics with their own items |
 
 ---
@@ -94,21 +104,21 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 - King of the hill with the champion frozen in its position
 - Song cards with play/stop preview and progress
 - Results: winner, full ranked table with strength, win/loss/tie, "low data" flags
-- Resume unfinished sessions; history of finished rankings
-- Offline play for an already downloaded topic (answers sync later)
+- Resume unfinished sessions; history of finished rankings on the device
+- Offline play for an already downloaded topic (answers upload when back online)
 - Attribution and licences screen; source link per item
 - Light and dark themes
-- Anonymous use, no login required
+- Anonymous use: no sign-up, no login; a random device ID is created on first launch
 
-**Backend (.NET)**
+**Backend — ASP.NET Core Web API (.NET 10) + Microsoft SQL Server**
 
-- Catalogue API: topics, levels, items, media references
-- Session and comparison API (idempotent, works offline-first)
+- Catalogue endpoints: topics, levels, items, media references
+- Session and comparison endpoints (idempotent, offline-first, keyed by device ID)
 - Ranking service: Bradley–Terry fit and adaptive pairing, ported from the prototype
-- Ingestion workers that pull metadata and media references from providers
-- Admin panel: curate items, assign tiers, fix wrong matches, disable an asset
+- Ingestion jobs that pull metadata and media references from content providers into SQL Server
+- Admin endpoints and a simple admin page: curate items, assign tiers, fix wrong matches, disable an asset — reachable only from the internal network (see §7)
 - Asset licence registry and per-asset kill switch
-- Monitoring, logging, rate limiting
+- Structured logging and API rate limiting
 
 **Content**
 
@@ -117,16 +127,13 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 
 ### 5.2 Phase 2
 
-- Accounts (Apple, Google, email) with cross-device sync
-- **Global community rankings** per topic, with anti-abuse controls
+- **Global community rankings** per topic, with anti-abuse controls based on device ID and rate limits
 - Share-as-image ranking cards for social apps
 - User-created topics, with moderation
 - Localisation (Azerbaijani, English, Russian — to be confirmed)
-- Push notifications for new topics
 
 ### 5.3 Phase 3
 
-- Friends, "compare with a friend", head-to-head
 - Trending and seasonal topics, editorial picks
 - Monetisation (ads or a premium tier), if chosen in §17
 - Web version built on the same API
@@ -135,6 +142,10 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 
 | Item | Reason |
 |---|---|
+| **Cloud or third-party hosting providers** | Not needed for this phase. The API and SQL Server run on a server we manage |
+| **CI/CD pipelines** | Not needed for this phase. Builds and releases are done manually with a release checklist (§7) |
+| **Authentication, user accounts, sign-in, cross-device sync, friends** | Not needed for this phase. The app is anonymous; a random device ID groups a device's data. Anything that needs a known identity is excluded |
+| Media storage on our server (blob storage, CDN) | Media are referenced from provider servers; we store no image or audio files in this phase |
 | Hosting our own copies of posters, covers or song audio without a licence | Copyright exposure |
 | Full-length music streaming | Requires label licensing |
 | Guaranteed "chorus" clips | No public API provides chorus timestamps. Apple and Deezer choose their own 30-second segment, usually the hook but not guaranteed. True chorus clips require licensing audio directly |
@@ -158,10 +169,12 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 | FR-10 | Results show rank, name, image, strength, win/loss/tie and low-confidence flags |
 | FR-11 | The user can refine a finished ranking with more rounds |
 | FR-12 | Unfinished sessions can be resumed after the app is closed |
-| FR-13 | A downloaded topic can be played offline; answers sync when online |
+| FR-13 | A downloaded topic can be played offline; answers upload to the API when online |
 | FR-14 | Each item links to its source; an attribution screen lists all providers |
 | FR-15 | An admin can edit items and tiers, re-match media and disable any asset instantly |
 | FR-16 | If media fails to load, the card falls back cleanly to text |
+| FR-17 | The app works without any sign-up; on first launch it creates a random device ID and sends it with every API call |
+| FR-18 | The user can delete all data for their device from the app (clears local data and asks the API to delete that device's records) |
 
 ---
 
@@ -169,15 +182,17 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 
 | Area | Requirement |
 |---|---|
-| Performance | App cold start < 2 s on mid-range devices; next pair < 100 ms (computed on device); API p95 < 300 ms |
-| Availability | Backend ≥ 99.5 % monthly; the app keeps working offline for downloaded topics |
+| Performance | App cold start < 2 s on mid-range devices; next pair < 100 ms (computed on device); API p95 < 300 ms on our server |
+| Availability | Best effort on a single self-managed server; the app keeps working offline for downloaded topics |
+| Database | Microsoft SQL Server; schema managed with EF Core migrations; scheduled full and log backups with a tested restore |
 | Scalability | Global ranking recomputation as a background job, not on the request path |
-| Security | HTTPS only, OWASP API Top 10 controls, secrets in a vault, rate limiting per device and IP |
-| Privacy | Compliance with the Law of the Republic of Azerbaijan on Personal Data; GDPR if serving EU users; data minimisation (anonymous by default); in-app account deletion (an App Store requirement once accounts exist) |
+| Security | HTTPS only, OWASP API Top 10 controls, secrets kept out of source code, ASP.NET Core rate limiting per device ID and IP. **With no authentication, the public API exposes only catalogue reads and device-scoped writes;** admin endpoints listen on the internal network only (separate port or IP allow-list) |
+| Privacy | No names, emails or accounts are collected. Device IDs and comparison data are still treated as personal data under the Law of the Republic of Azerbaijan on Personal Data (and GDPR if serving EU users); data minimisation; per-device deletion (FR-18) |
 | Accessibility | Screen-reader labels, sufficient contrast in both themes, large tap targets, reduced-motion support |
 | Licensing | Provider terms enforced in code: attribution text, hotlinking where required, cache lifetimes, rate limits |
-| Observability | Structured logs, metrics, distributed tracing, crash reporting |
-| Quality | Automated tests in CI; the prototype's 39 ranking tests become acceptance tests for the C# port |
+| Observability | Structured logs (Serilog), request logging, crash reporting in the app |
+| Release process | No CI/CD. Every release follows a written checklist: run all unit and integration tests locally, apply and verify EF Core migrations on a backup copy, publish the API manually, and build the app locally for the App Store and Google Play |
+| Quality | Automated tests run locally before each release; the prototype's 39 ranking tests become acceptance tests for the C# port |
 
 ---
 
@@ -187,25 +202,21 @@ Choose topic ─► Choose level ─► Compare pairs (tap one) ─► See ranki
 flowchart TB
     subgraph Device["Mobile (Flutter: iOS + Android)"]
         UI[UI: topics, arena, results]
-        LOCAL[(Local DB: sessions, cached topics)]
+        LOCAL[(Local DB: sessions, cached topics, device ID)]
         ENG[On-device pairing + rating]
         UI --> ENG --> LOCAL
     end
 
-    subgraph Backend[".NET 10 backend"]
-        API[ASP.NET Core Web API]
+    subgraph Server["Our server (self-managed)"]
+        API[ASP.NET Core Web API · .NET 10]
         RANK[Ranking service: Bradley–Terry]
-        JOBS[Background workers: ingestion, global ranking]
-        ADMIN[Admin panel]
-        DB[(PostgreSQL)]
-        CACHE[(Redis)]
-        BLOB[(Blob storage + CDN: owned/licensed media only)]
+        JOBS[Background jobs: ingestion, global ranking]
+        ADMIN[Admin endpoints + page<br/>internal network only]
+        SQL[(Microsoft SQL Server)]
         API --> RANK
-        API --> DB
-        API --> CACHE
-        JOBS --> DB
-        ADMIN --> DB
-        JOBS --> BLOB
+        API --> SQL
+        JOBS --> SQL
+        ADMIN --> SQL
     end
 
     subgraph Providers["Content providers"]
@@ -216,10 +227,12 @@ flowchart TB
         UNS[Unsplash / Pexels: food, cities]
     end
 
-    Device <-->|HTTPS / JSON| API
+    Device <-->|HTTPS / JSON · device ID header| API
     JOBS --> Providers
-    UI -. loads images and previews from provider CDNs where terms require .-> Providers
+    UI -. loads images and previews directly from provider servers .-> Providers
 ```
+
+There is no media storage on our side: SQL Server holds the URLs, licences and attribution, and the app loads the files from the providers' own servers. This keeps the server small and respects providers that require hotlinking.
 
 ### 8.1 Mobile (Flutter)
 
@@ -227,26 +240,35 @@ flowchart TB
 |---|---|
 | State management | Riverpod (or Bloc) |
 | Navigation | go_router |
-| Networking | dio, with retry and offline queue |
+| Networking | dio, with retry and offline upload queue |
 | Images | cached_network_image |
 | Audio | just_audio |
 | Local storage | drift (SQLite) or Isar |
-| Analytics and crashes | Firebase Analytics + Crashlytics, or Sentry |
-| Engine | Pairing and rating run on the device for instant response; the server stays the source of truth for global data |
+| Device ID | A random UUID generated on first launch and stored locally |
+| Crash reporting | Sentry or Firebase Crashlytics |
+| Engine | Pairing and rating run on the device for instant response; the server stays the source of truth for the catalogue and global rankings |
 
-### 8.2 Backend (.NET)
+### 8.2 Backend — ASP.NET Core Web API
 
 | Concern | Choice |
 |---|---|
-| Runtime | .NET 10 (LTS), ASP.NET Core Web API |
-| Data | PostgreSQL + EF Core |
-| Cache and rate limits | Redis |
-| Background jobs | Hangfire or Quartz.NET |
-| Auth (Phase 2) | ASP.NET Core Identity or an OIDC provider; Sign in with Apple and Google |
-| Media | Blob storage + CDN, only for assets we own or are licensed to store |
-| Hosting | Azure (natural fit for .NET) or AWS — decision in §17 |
-| CI/CD | GitHub Actions, Docker |
-| Tests | xUnit, integration tests with Testcontainers |
+| Runtime | .NET 10 (LTS), ASP.NET Core Web API (controllers or minimal APIs) |
+| Database | **Microsoft SQL Server** |
+| Data access | EF Core with the SQL Server provider; migrations for schema changes |
+| Caching | In-process memory cache (`IMemoryCache` / output caching) for catalogue reads — no separate cache server |
+| Rate limiting | ASP.NET Core built-in rate-limiting middleware, partitioned by device ID and IP |
+| Background jobs | Hangfire with SQL Server storage (jobs and their dashboard live in the same database), or a .NET `BackgroundService` for simpler schedules |
+| API documentation | OpenAPI (built into ASP.NET Core) for the Flutter team |
+| Logging | Serilog to file and/or a SQL Server log table |
+| Tests | xUnit; integration tests against a local SQL Server instance (Developer or Express edition) |
+| Authentication | **None in this phase** (see §5.4 and §7 for how the API is protected without it) |
+
+### 8.3 SQL Server notes
+
+- **Edition:** Developer edition for development and testing (free, non-production only). For production, Express (free, with a capped database size and limited memory and CPU) is likely enough for the MVP catalogue and comparison volume; Standard if limits are reached. The exact limits are to be checked against the version chosen (decision D3).
+- **Key indexes:** comparisons by session and by topic; items by topic and tier; assets by item and enabled flag.
+- **Global ranking job:** reads comparisons per topic in batches and writes a `GlobalRanking` snapshot, so the app reads a precomputed table.
+- **Backups:** nightly full backup plus transaction-log backups; a restore test before launch.
 
 ---
 
@@ -262,13 +284,13 @@ flowchart TB
 | Music artists | MusicBrainz, Wikidata | Wikimedia Commons, Apple artist artwork | Commons licences vary per file (CC BY, CC BY-SA, public domain); attribution required |
 | Footballers | Wikidata | Wikimedia Commons | Commercial sports-photo agencies are costly; likeness caution as for actors |
 | Food, cities | Wikidata | Unsplash, Pexels, Wikimedia Commons | Unsplash permits commercial use but requires hotlinking, credit to the photographer, and registering downloads |
-| Custom topics (Phase 2) | User-entered | Wikipedia lookup or user upload (moderated) | User uploads need terms of use and moderation |
+| Custom topics (Phase 2) | User-entered | Wikipedia lookup only (no uploads, since we store no media) | Moderation of names and descriptions |
 
 ### 9.2 Rules for every asset
 
-1. **Record provenance.** Store provider, provider ID, source URL, licence, attribution text and retrieval date with every asset.
-2. **Obey each provider's terms in code.** Attribution, hotlinking versus copying, cache lifetimes and rate limits are enforced by the ingestion service, not left to people.
-3. **Kill switch.** Any asset can be disabled from the admin panel and disappears from the app without a release.
+1. **Record provenance.** Store provider, provider ID, source URL, licence, attribution text and retrieval date with every asset in SQL Server.
+2. **Obey each provider's terms in code.** Attribution, hotlinking, cache lifetimes and rate limits are enforced by the ingestion jobs, not left to people.
+3. **Kill switch.** Any asset can be disabled from the admin page and disappears from the app without a release.
 4. **Human curation.** Automated matching makes mistakes ("Parasite" the film versus the organism; two songs with the same title). Every launch item is reviewed.
 5. **Graceful fallback.** A missing or blocked image never blocks play; the card shows text.
 
@@ -282,25 +304,25 @@ flowchart TB
 | Pexels | Hourly and monthly quotas on the free tier |
 | TMDB | Fair-use rate limits; commercial terms negotiated separately |
 
-Because of these limits, **the backend ingests and caches metadata in advance**. The app reads from our API, not from providers, except where a provider requires hotlinking images directly from its CDN.
+Because of these limits, **the backend ingests metadata in advance and stores it in SQL Server.** The app reads the catalogue from our API, not from the providers. The only direct provider traffic from the app is loading the images and audio previews themselves.
 
 ---
 
-## 10. Data model (core entities)
+## 10. Data model (core SQL Server tables)
 
-| Entity | Key fields |
+| Table | Key columns |
 |---|---|
-| **Topic** | id, name, icon, description, media kind, active |
-| **Item** | id, topic, name, detail (year/country/artist), tier (1–3), external IDs (TMDB, MusicBrainz, Wikidata) |
-| **Asset** | id, item, type (image/audio), URL, provider, provider ID, licence, attribution, hotlink-only flag, retrieved at, enabled |
-| **Level** | id, name, tiers included, pool size, round budget |
-| **Session** | id, user/device, topic, level, mode, seed, status, created/updated |
-| **Comparison** | id, session, item A, item B, winner (A/B/tie), timestamp, client sequence number |
-| **PersonalRanking** | session, item, rating, wins, losses, ties, confidence |
-| **GlobalRanking** | topic, item, rating, comparisons count, computed at |
-| **User** (Phase 2) | id, auth provider, display name, created, deleted at |
+| **Topic** | Id, Name, Icon, Description, MediaKind, IsActive |
+| **Item** | Id, TopicId, Name, Detail (year/country/artist), Tier (1–3), TmdbId, MusicBrainzId, WikidataId |
+| **Asset** | Id, ItemId, Type (image/audio), Url, Provider, ProviderId, Licence, Attribution, HotlinkOnly, RetrievedAt, IsEnabled |
+| **Level** | Id, Name, Tiers, PoolSize, RoundBudget |
+| **Device** | Id (random UUID from the app), FirstSeenAt, LastSeenAt |
+| **Session** | Id, DeviceId, TopicId, LevelId, Mode, Seed, Status, CreatedAt, UpdatedAt |
+| **Comparison** | Id, SessionId, ItemAId, ItemBId, Winner (A/B/tie), CreatedAt, ClientSequence (for idempotent offline upload) |
+| **PersonalRanking** | SessionId, ItemId, Rating, Wins, Losses, Ties, Confidence |
+| **GlobalRanking** | TopicId, ItemId, Rating, ComparisonCount, ComputedAt |
 
-The comparison history is the source of truth. Ratings are always re-derived from it, which makes undo exact and audit simple.
+There is no User table: the Device table replaces it. The comparison history is the source of truth. Ratings are always re-derived from it, which makes undo exact and audit simple.
 
 ---
 
@@ -309,7 +331,7 @@ The comparison history is the source of truth. Ratings are always re-derived fro
 - **Model: Bradley–Terry.** Each item has a strength *p*; item *i* beats *j* with probability *pᵢ / (pᵢ + pⱼ)*. All strengths are fitted together from every comparison, so beating a strong item counts for more than beating a weak one. The fit uses Hunter's MM algorithm, regularised so undefeated or winless items still get finite ratings.
 - **Adaptive pairing.** Each round serves the most informative pair: close in current rating, never asked before, involving under-sampled items, and not repeating the previous round.
 - **Proven in the prototype.** In simulation, 16 items are ordered exactly within the default budget, and accuracy stays within about one position when 10 % of answers are inconsistent.
-- **Global ranking (Phase 2).** The same model fitted over all users' comparisons per topic, computed in a background job. Weighting and anti-manipulation rules (per-device caps, anomaly detection) are part of Phase 2 design.
+- **Global ranking (Phase 2).** The same model fitted over all devices' comparisons per topic, computed in a background job. Without accounts, anti-manipulation relies on per-device caps, IP rate limits, ignoring sessions that are too fast or too uniform, and down-weighting devices with anomalous patterns.
 
 ---
 
@@ -319,14 +341,15 @@ The comparison history is the source of truth. Ratings are always re-derived fro
 |---|---|---|---|---|
 | **Content & licensing advisor** | 🔴 Urgent | Part-time, retainer | Commercial versus non-commercial position, TMDB licence, likeness review, attribution and takedown policy, terms of use, privacy policy | IP and copyright, API terms of service, media licensing, data-protection law |
 | **Product owner / content curator** | 🔴 Urgent | 1 FTE | Backlog, topic lists, tiering, match quality, acceptance | Product management, domain knowledge (film, music, sport), writing requirements |
-| **.NET backend developer** | 🔴 Urgent | 1 FTE | API, ranking port, sync, admin, global rankings | ASP.NET Core, EF Core, PostgreSQL, Redis, REST design, xUnit, security |
-| **Data / integration engineer** | 🔴 Urgent | 1 FTE (may combine with backend in a lean team) | Provider clients, ingestion jobs, entity matching, licence registry | REST integrations, rate limiting, ETL, Hangfire/Quartz, data quality, Wikidata/SPARQL |
-| **Flutter developer** | 🟠 Now | 1–2 FTE | The mobile app, offline sync, audio, store releases | Dart, Flutter, Riverpod/Bloc, go_router, dio, just_audio, drift/Isar, App Store and Play Store publishing |
+| **.NET backend developer** | 🔴 Urgent | 1 FTE | Web API, ranking port, offline upload, admin page, global rankings, server setup and releases | C#, ASP.NET Core Web API, EF Core, REST design, xUnit, OWASP API security, rate limiting, IIS or Kestrel deployment |
+| **SQL Server / data engineer** | 🔴 Urgent | 1 FTE (may combine with backend in a lean team) | Schema and indexes, ingestion jobs, entity matching, licence registry, backups and restore | Microsoft SQL Server, T-SQL, query tuning and indexing, backup/restore, EF Core migrations, Hangfire, REST integrations, Wikidata/SPARQL |
+| **Flutter developer** | 🟠 Now | 1–2 FTE | The mobile app, offline queue, audio, manual store builds and submission | Dart, Flutter, Riverpod/Bloc, go_router, dio, just_audio, drift/Isar, App Store and Play Store publishing |
 | **UI/UX designer** | 🟠 Now | 0.5 FTE | Mobile design from the prototype's minimal design system, prototypes, usability tests | Figma, mobile interaction design, accessibility |
-| **DevOps / cloud engineer** | 🟡 Part-time | 0.25–0.5 FTE | CI/CD, environments, CDN, monitoring, backups | Azure or AWS, Docker, GitHub Actions, observability |
-| **QA engineer** | 🟡 From week 4 | 0.5–1 FTE | Test plans, device matrix, regression, store compliance | Mobile testing, API testing, test automation |
+| **QA engineer** | 🟡 From week 4 | 0.5–1 FTE | Test plans, device matrix, regression, release checklist sign-off | Mobile testing, API testing (Postman or similar), SQL for test data |
 
-**Lean option (about 4 people):** a full-stack .NET developer who also owns ingestion, one Flutter developer, a designer who also acts as product owner, and a licensing advisor on retainer.
+No DevOps or cloud role is needed in this phase, since there is no hosting provider and no CI/CD.
+
+**Lean option (about 4 people):** a full-stack .NET developer with strong SQL Server skills who also owns ingestion, one Flutter developer, a designer who also acts as product owner, and a licensing advisor on retainer.
 
 ---
 
@@ -340,28 +363,28 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %b
     section Phase 0 · Discovery
-    Licensing decisions & accounts      :p0a, 2026-11-02, 14d
-    UX design & architecture            :p0b, 2026-11-02, 21d
-    Ingestion proof of concept          :p0c, 2026-11-09, 14d
+    Licensing decisions & provider accounts :p0a, 2026-11-02, 14d
+    UX design & architecture                :p0b, 2026-11-02, 21d
+    SQL Server setup & ingestion PoC        :p0c, 2026-11-09, 14d
     section Phase 1 · MVP
-    Backend core + ranking port         :p1a, after p0b, 42d
-    Ingestion pipeline + admin          :p1b, after p0c, 49d
-    Flutter app                         :p1c, after p0b, 56d
-    Content curation (launch topics)    :p1d, after p0c, 49d
-    QA, beta (TestFlight / Play test)   :p1e, after p1c, 21d
-    Store submission & launch           :milestone, after p1e, 0d
+    Web API + ranking port                  :p1a, after p0b, 42d
+    Ingestion jobs + admin page             :p1b, after p0c, 49d
+    Flutter app                             :p1c, after p0b, 56d
+    Content curation (launch topics)        :p1d, after p0c, 49d
+    QA, beta (TestFlight / Play test)       :p1e, after p1c, 21d
+    Store submission & launch               :milestone, after p1e, 0d
     section Phase 2
-    Accounts, sync, global rankings     :p2a, after p1e, 56d
-    Sharing, custom topics, localisation:p2b, after p1e, 56d
+    Global rankings & anti-abuse            :p2a, after p1e, 42d
+    Sharing, custom topics, localisation    :p2b, after p1e, 56d
 ```
 
 | Milestone | Indicative timing | Exit criteria |
 |---|---|---|
-| M0 · Discovery done | ~3 weeks | Licensing position decided, provider accounts active, designs approved, ingestion PoC shows ≥ 95 % correct matches on a sample topic |
+| M0 · Discovery done | ~3 weeks | Licensing position decided, content-provider accounts active, designs approved, SQL Server installed, ingestion PoC shows ≥ 95 % correct matches on a sample topic |
 | M1 · Feature complete | ~11–12 weeks | All MVP functional requirements implemented; ranking port passes the prototype's tests |
-| M2 · Beta | ~13–14 weeks | Closed beta on TestFlight and Play internal testing; crash-free ≥ 99 % |
-| M3 · Launch | ~15–16 weeks | Store approval; monitoring and takedown process live |
-| M4 · Phase 2 complete | +8–10 weeks | Accounts, global rankings, sharing, localisation |
+| M2 · Beta | ~13–14 weeks | Closed beta on TestFlight and Play internal testing; crash-free ≥ 99 %; backup restore tested |
+| M3 · Launch | ~15–16 weeks | Store approval; release checklist complete; takedown process live |
+| M4 · Phase 2 complete | +6–8 weeks | Global rankings, sharing, custom topics, localisation |
 
 ---
 
@@ -372,11 +395,12 @@ Figures to be confirmed; listed so the budget covers every line.
 | Item | Note |
 |---|---|
 | Team | The largest cost; see §12 |
-| Apple Developer Program | USD 99 per year |
-| Google Play Console | USD 25 one-time |
+| Server | One machine we manage for the Web API and SQL Server (existing hardware or a purchased server), plus an SSL certificate and a domain or fixed address the app can reach |
+| SQL Server licence | Developer and Express editions are free; Standard is paid and only needed if Express limits are reached |
+| Apple Developer Program | USD 99 per year (needed to publish to the App Store) |
+| Google Play Console | USD 25 one-time (needed to publish to Google Play) |
 | TMDB commercial licence | Only if commercial; price on negotiation |
-| Cloud hosting | API, PostgreSQL, Redis, storage, CDN; modest at MVP scale |
-| Monitoring and crash reporting | Free tiers likely sufficient for the MVP |
+| Crash reporting | Free tiers likely sufficient for the MVP |
 | Legal | Licensing review, terms of use, privacy policy |
 | Design tools | Figma seats |
 
@@ -389,21 +413,26 @@ Figures to be confirmed; listed so the budget covers every line.
 | R1 | Commercial use of posters or celebrity images without the right licence | High if unmanaged | High | Licensing advisor from day 1; TMDB commercial licence; Commons-only fallback; per-asset kill switch |
 | R2 | A provider changes its terms or removes an API (as Spotify did with previews) | Medium | High | Provider abstraction layer with at least two sources per media type; text fallback |
 | R3 | Wrong media matched to an item | High | Medium | Explicit external IDs, human review, admin re-match tool |
-| R4 | Provider rate limits slow ingestion | Medium | Low | Pre-ingest and cache in the backend; scheduled jobs; back-off |
+| R4 | Provider rate limits slow ingestion | Medium | Low | Pre-ingest into SQL Server; scheduled jobs; back-off |
 | R5 | App store rejection (metadata, privacy, third-party content) | Medium | Medium | Store guidelines review in design phase; attribution screen; privacy labels |
-| R6 | Global rankings manipulated by bots | Medium (Phase 2) | Medium | Device attestation, per-device caps, anomaly detection, weighting |
-| R7 | Low retention after novelty | Medium | High | Fresh topics, sharing, friend comparisons, notifications for new topics |
-| R8 | Scope creep before launch | Medium | Medium | Fixed MVP scope (§5.1); change control through the product owner |
+| R6 | Global rankings manipulated — easier without accounts | Medium (Phase 2) | Medium | Per-device caps, IP rate limits, filtering implausibly fast or uniform sessions, down-weighting anomalous devices |
+| R7 | Unauthenticated API abused (spam writes, scraping) | Medium | Medium | Public API limited to catalogue reads and device-scoped writes; rate limiting; request size limits; admin endpoints on the internal network only |
+| R8 | Single self-managed server fails or data is lost | Medium | High | Nightly full and log backups stored off the machine; tested restore; app keeps working offline meanwhile |
+| R9 | Manual releases without CI/CD introduce mistakes | Medium | Medium | Written release checklist (§7); tests run locally before every release; migrations rehearsed on a backup copy |
+| R10 | Users reinstall or change phones and lose their rankings | High | Low | Accepted for this phase (no accounts); share-as-image keeps results; revisit if users ask for sync |
+| R11 | Low retention after novelty | Medium | High | Fresh topics, sharing, notifications for new topics (Phase 2) |
+| R12 | Scope creep before launch | Medium | Medium | Fixed MVP scope (§5.1); change control through the product owner |
 
 ---
 
 ## 16. Assumptions and dependencies
 
 - The ranking engine and rules from the web prototype are the functional specification for both the app and the backend.
+- **No hosting provider, no CI/CD and no authentication in this phase.** The Web API and SQL Server run on a server we manage; releases are manual; the app is anonymous.
+- The server has a stable address and an SSL certificate reachable by the mobile app.
+- Content providers' APIs remain available on current terms during the build.
+- Media are loaded from provider servers; we store only metadata, URLs, licences and attribution.
 - Launch markets and languages will be confirmed in §17.
-- Providers' APIs remain available on current terms during the build.
-- Media are loaded from provider CDNs where required by their terms; we store only what we are licensed to store.
-- The MVP needs no login; accounts arrive in Phase 2.
 
 ---
 
@@ -413,8 +442,8 @@ Figures to be confirmed; listed so the budget covers every line.
 |---|---|---|---|
 | D1 | **Commercial or non-commercial at launch?** | Free with no revenue / ads / premium | Determines TMDB licensing, legal cost and which media sources are allowed |
 | D2 | Launch markets and languages | Azerbaijan only / region / global; az, en, ru | Localisation effort, privacy law scope, catalogue choices (e.g. local food and cities) |
-| D3 | Accounts in the MVP? | Anonymous first (recommended) / login from day 1 | Scope, privacy obligations, time to launch |
-| D4 | Cloud provider | Azure (recommended for .NET) / AWS | Hosting, CI/CD, team skills |
+| D3 | SQL Server version and edition for production | Express (free, capped) / Standard (paid) | Licence cost and database size and performance limits |
+| D4 | Where the server lives | Existing office server / new dedicated machine / data-centre colocation | Reliability, backups, address and SSL setup |
 | D5 | Launch topics | Keep the prototype's nine / choose 6–8 | Curation effort and licensing exposure |
 | D6 | Team model | In-house / agency / mixed | Cost, speed, long-term ownership |
 
@@ -422,12 +451,13 @@ Figures to be confirmed; listed so the budget covers every line.
 
 ## 18. Next steps (first two weeks)
 
-1. Decide D1 and D3, and engage the licensing advisor.
-2. Register accounts: TMDB API, Apple Developer, Google Play Console, Unsplash, Pexels.
-3. Freeze launch topics and target item counts (D5).
-4. Build the ingestion proof of concept for one topic per provider and measure match accuracy.
-5. Port the ranking engine to C# and make the prototype's 39 tests pass.
-6. Produce UX designs for the four core screens: topics, level picker, arena, results.
+1. Decide D1 and engage the licensing advisor.
+2. Register content-provider accounts: TMDB API, Unsplash, Pexels; register Apple Developer and Google Play Console for publishing.
+3. Decide D3 and D4; install SQL Server (Developer edition for the team) and create the first schema.
+4. Freeze launch topics and target item counts (D5).
+5. Build the ingestion proof of concept for one topic per provider into SQL Server and measure match accuracy.
+6. Port the ranking engine to C# and make the prototype's 39 tests pass.
+7. Produce UX designs for the four core screens: topics, level picker, arena, results.
 
 ---
 
@@ -441,14 +471,16 @@ Figures to be confirmed; listed so the budget covers every line.
 | Undo, skip, tie, refine, resume | Done |
 | Posters, photos, covers and 30-second song previews | Done against mocked providers; live check pending on GitHub Pages |
 | Minimal light/dark design, mobile layout | Done |
-| Single-file build for WebView packaging | Done |
-| Accounts, sync, global rankings, licensing compliance | **Not started** — scope of this project |
+| Anonymous, device-local storage | Done (browser storage) — maps directly to the device-ID model |
+| Web API, SQL Server, ingestion, global rankings, licensing compliance | **Not started** — scope of this project |
 
 ## Appendix B — Glossary
 
 | Term | Meaning |
 |---|---|
 | **Bradley–Terry** | A statistical model that estimates each item's strength from pairwise wins and losses |
+| **Device ID** | A random identifier created by the app on first launch, used instead of user accounts |
+| **EF Core migrations** | Versioned schema changes applied to SQL Server from the .NET code |
 | **Hotlinking** | Displaying an image directly from the provider's server instead of copying it |
 | **CC0 / CC BY / CC BY-SA** | Creative Commons licences: public domain / attribution required / attribution and share-alike |
 | **Right of publicity** | A person's right to control commercial use of their likeness |
