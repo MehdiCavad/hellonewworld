@@ -32,6 +32,32 @@ public sealed class SessionSyncService(RankdDbContext db, TimeProvider clock)
         return device;
     }
 
+    /// <summary>
+    /// Touches the device and stores the upload. Two uploads of the same session can
+    /// race (a retry overtaking a slow request); the loser sees a unique-key clash,
+    /// so it starts again from a clean change tracker and replays against what won.
+    /// </summary>
+    public async Task<SessionSyncResult> UploadAsync(Guid deviceId, string? platform, string? appVersion, Guid sessionId, SessionUpload upload, CancellationToken ct = default)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await TouchDeviceAsync(deviceId, platform, appVersion, ct);
+                return await SyncAsync(deviceId, sessionId, upload, ct);
+            }
+            catch (DbUpdateException) when (attempt < 3)
+            {
+                db.ChangeTracker.Clear();
+                await Task.Delay(TimeSpan.FromMilliseconds(40 * attempt), ct);
+            }
+            catch (DbUpdateException)
+            {
+                throw new SyncException("The session was being updated by another request. Try again.", 409);
+            }
+        }
+    }
+
     public async Task<SessionSyncResult> SyncAsync(Guid deviceId, Guid sessionId, SessionUpload upload, CancellationToken ct = default)
     {
         if (sessionId == Guid.Empty) throw new SyncException("Session id must be a non-empty GUID.");

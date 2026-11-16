@@ -107,6 +107,22 @@ public class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Racing_uploads_of_one_session_all_succeed()
+    {
+        // The app can fire a milestone upload while the previous one is still in flight.
+        var topic = await Topic("movies");
+        var ids = topic.Items.Take(6).Select(i => i.Id).ToArray();
+        var http = Client(Guid.NewGuid());
+        var sessionId = Guid.NewGuid();
+        var upload = Upload(topic, (ids[0], ids[1], "a"), (ids[2], ids[3], "b"), (ids[4], ids[5], "a"));
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => http.PutAsJsonAsync($"/api/v1/sessions/{sessionId}", upload)));
+        Assert.All(responses, r => Assert.True(r.IsSuccessStatusCode, $"{(int)r.StatusCode}"));
+        var mine = await http.GetFromJsonAsync<List<SessionSummaryDto>>("/api/v1/sessions");
+        Assert.Equal(3, Assert.Single(mine!).Comparisons);
+    }
+
+    [Fact]
     public async Task Another_device_cannot_overwrite_a_session()
     {
         var topic = await Topic("cities");

@@ -20,8 +20,8 @@ public static class DeviceEndpoints
                 var device = DeviceId(http);
                 try
                 {
-                    await sync.TouchDeviceAsync(device, http.Request.Headers["X-Rankd-Platform"], http.Request.Headers["X-Rankd-Version"], ct);
-                    return Results.Ok(await sync.SyncAsync(device, id, body, ct));
+                    return Results.Ok(await sync.UploadAsync(
+                        device, http.Request.Headers["X-Rankd-Platform"], http.Request.Headers["X-Rankd-Version"], id, body, ct));
                 }
                 catch (SyncException ex)
                 {
@@ -30,7 +30,7 @@ public static class DeviceEndpoints
             })
             .WithName("SyncSession")
             .WithSummary("Create or update a session from the device. Idempotent: the uploaded comparison list replaces the stored one.")
-            .Produces<SessionSyncResult>().Produces<ApiProblem>(StatusCodes.Status400BadRequest);
+            .Produces<SessionSyncResult>().Produces<ApiProblem>(StatusCodes.Status400BadRequest).Produces<ApiProblem>(StatusCodes.Status409Conflict);
 
         me.MapGet("/sessions", async (HttpContext http, RankdDbContext db, CancellationToken ct) =>
             {
