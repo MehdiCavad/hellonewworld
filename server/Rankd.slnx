@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Rankd.Admin/Rankd.Admin.csproj" />
+    <Project Path="src/Rankd.Api/Rankd.Api.csproj" />
+    <Project Path="src/Rankd.Core/Rankd.Core.csproj" />
+    <Project Path="src/Rankd.Infrastructure/Rankd.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Rankd.Tests/Rankd.Tests.csproj" />
+  </Folder>
+</Solution>

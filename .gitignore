@@ -1,2 +1,15 @@
 dist/
 node_modules/
+# .NET
+server/**/bin/
+server/**/obj/
+server/*.db
+server/*.db-shm
+server/*.db-wal
+# Flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.idea/
+*.iml
