@@ -1,0 +1,154 @@
+@page "/rankings"
+@page "/rankings/{Slug}"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+
+<PageTitle>Community rankings · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="trophy" Size="14" /> Bradley–Terry over every device</div>
+        <h1>Community rankings</h1>
+        <p>All answers for a topic fitted together, with sessions that are too short or implausibly fast left out and each device's weight capped. @(_computed is { } c ? $"Last computed {Palette.Ago(c, Clock.GetUtcNow())}." : "")</p>
+    </div>
+    <div class="actions">
+        <button class="btn primary" disabled="@_busy" @onclick="Recompute"><Icon Name="refresh" Size="16" Class="@(_busy ? "spin" : null)" /> Recompute @(_topic?.Name ?? "")</button>
+    </div>
+</div>
+
+<div class="row wrap" style="margin-bottom:16px;gap:8px">
+    @foreach (var t in _topics)
+    {
+        <a class="chip @(t.Slug == _topic?.Slug ? "brand" : "outline")" style="height:32px;padding:0 12px;font-size:13px" href="rankings/@t.Slug">@t.Emoji @t.Name</a>
+    }
+</div>
+
+@if (_topic is not null)
+{
+    <div class="grid grid-main">
+        <div class="card">
+            <div class="card-head">
+                <div><h2>@_topic.Emoji @_topic.Name</h2><div class="sub">@_rows.Count items · @((_rows.Sum(r => r.Ranking.ComparisonCount) / 2).ToString("N0")) answers counted</div></div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th style="width:56px">#</th><th>Item</th><th>Strength</th><th class="right">Rating</th><th class="right">W–L–T</th><th class="right">Win prob. vs #1</th></tr></thead>
+                    <tbody>
+                        @{ var top = _rows.FirstOrDefault()?.Ranking.Rating ?? 1500; var min = _rows.LastOrDefault()?.Ranking.Rating ?? 1500; }
+                        @foreach (var r in _rows)
+                        {
+                            var g = r.Ranking;
+                            <tr>
+                                <td>
+                                    <div class="rank @(g.Rank switch { 1 => "gold", 2 => "silver", 3 => "bronze", _ => "" })">@g.Rank</div>
+                                    @if (g.PreviousRank is { } p && p != g.Rank)
+                                    {
+                                        <div class="move @(p > g.Rank ? "up" : "down")" style="text-align:center">@(p > g.Rank ? "▲" : "▼")@Math.Abs(p - g.Rank)</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="cell-main">
+                                        <Thumb Url="@r.Image" Name="@r.Name" Accent="@_topic.Accent" />
+                                        <div><div class="cell-title">@r.Name</div><div class="cell-sub">@r.Detail</div></div>
+                                    </div>
+                                </td>
+                                <td style="width:28%">
+                                    <div class="bar-track"><div class="bar-fill" style="width:@Width(g.Rating, min, top);background:@Palette.Cover(_topic.Accent)"></div></div>
+                                </td>
+                                <td class="right num" style="font-weight:600">@Math.Round(g.Rating)</td>
+                                <td class="right num small" style="white-space:nowrap"><span style="color:var(--good)">@g.Wins</span>–<span style="color:var(--bad)">@g.Losses</span>–<span class="muted">@g.Ties</span></td>
+                                <td class="right num small muted">@(g.Rank == 1 ? "—" : Rankd.Core.Ranking.BradleyTerry.WinProbability(g.Rating, top).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", ""))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (_rows.Count == 0)
+                {
+                    <div class="empty"><div class="icon-ring"><Icon Name="trophy" Size="22" /></div>No ranking yet. Press Recompute once players have answered.</div>
+                }
+            </div>
+        </div>
+
+        <div class="stack">
+            @if (_rows.Count >= 3)
+            {
+                <div class="card card-pad">
+                    <h2 style="margin-bottom:16px">Podium</h2>
+                    <div style="display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:10px;text-align:center">
+                        @foreach (var (r, h, medal) in new[] { (_rows[1], 92, "🥈"), (_rows[0], 128, "🥇"), (_rows[2], 72, "🥉") })
+                        {
+                            <div>
+                                <div style="display:flex;justify-content:center;margin-bottom:8px"><Thumb Url="@r.Image" Name="@r.Name" Accent="@_topic.Accent" Size="lg" /></div>
+                                <div class="small" style="font-weight:650;min-height:38px">@r.Name</div>
+                                <div style="height:@(h)px;border-radius:12px 12px 4px 4px;background:@Palette.Cover(_topic.Accent);display:grid;place-items:center;font-size:28px;margin-top:6px;box-shadow:inset 0 -18px 30px rgba(0,0,0,.12)">@medal</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            <div class="card card-pad">
+                <h2 style="margin-bottom:12px">How this is computed</h2>
+                <dl class="kv">
+                    <dt>Model</dt><dd>Bradley–Terry, Hunter's MM, prior of ½ win + ½ loss</dd>
+                    <dt>Min. answers</dt><dd>@_opts.MinComparisonsPerSession per session</dd>
+                    <dt>Speed floor</dt><dd>@_opts.MinSecondsPerAnswer.TotalMilliseconds ms per answer</dd>
+                    <dt>Device cap</dt><dd>@_opts.DeviceAnswerCap answers of weight</dd>
+                    <dt>Blocked devices</dt><dd>Excluded</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+    [Inject] private Microsoft.Extensions.Options.IOptions<GlobalRankingOptions> Options { get; set; } = default!;
+    private GlobalRankingOptions _opts => Options.Value;
+
+    private sealed record Row(GlobalRanking Ranking, string Name, string Detail, string? Image);
+    private List<Topic> _topics = [];
+    private Topic? _topic;
+    private List<Row> _rows = [];
+    private DateTimeOffset? _computed;
+    private bool _busy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _topics = await db.Topics.AsNoTracking().OrderBy(t => t.SortOrder).ToListAsync();
+        _topic = _topics.FirstOrDefault(t => t.Slug == Slug) ?? _topics.FirstOrDefault();
+        await LoadRows();
+    }
+
+    private async Task LoadRows()
+    {
+        if (_topic is null) return;
+        await using var db = await Factory.CreateDbContextAsync();
+        _rows = (await db.GlobalRankings.AsNoTracking().Where(g => g.TopicId == _topic.Id).OrderBy(g => g.Rank)
+                .Select(g => new { g, g.Item!.Name, g.Item.Detail, Image = g.Item.Assets.Where(a => a.IsEnabled && a.Type == AssetType.Image).Select(a => a.Url).FirstOrDefault() })
+                .ToListAsync())
+            .Select(x => new Row(x.g, x.Name, x.Detail, x.Image)).ToList();
+        _computed = _rows.FirstOrDefault()?.Ranking.ComputedAt;
+    }
+
+    private static string Width(double rating, double min, double max) =>
+        (8 + 92 * (rating - min) / Math.Max(1, max - min)).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+
+    private async Task Recompute()
+    {
+        if (_topic is null) return;
+        _busy = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var r = await scope.ServiceProvider.GetRequiredService<GlobalRankingService>().RecomputeAsync(_topic.Id);
+            await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync("rankings.recompute", _topic.Name, $"{r.Comparisons:N0} answers from {r.Devices} devices");
+            Toast.Show($"{_topic.Name}: {r.Comparisons:N0} answers from {r.Devices} devices");
+            await LoadRows();
+        }
+        finally { _busy = false; }
+    }
+}

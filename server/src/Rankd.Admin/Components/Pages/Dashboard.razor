@@ -1,0 +1,210 @@
+@page "/"
+@inject AdminQueries Queries
+@inject TimeProvider Clock
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+
+<PageTitle>Overview · Rankd Admin</PageTitle>
+
+@if (_d is null)
+{
+    <div class="grid grid-4">@for (int i = 0; i < 4; i++) { <div class="card skeleton" style="height:128px"></div> }</div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <div class="eyebrow"><Icon Name="sparkles" Size="14" /> @Greeting</div>
+            <h1>Here's how Rankd is doing</h1>
+            <p>Last 30 days of anonymous play across @_d.Topics topics. Community rankings @(_d.RankingsComputedAt is { } c ? $"were refreshed {Palette.Ago(c, Clock.GetUtcNow())}" : "have not been computed yet").</p>
+        </div>
+        <div class="actions">
+            <button class="btn" @onclick="Load"><Icon Name="refresh" Size="16" /> Refresh</button>
+            <button class="btn primary" disabled="@_busy" @onclick="Recompute">
+                <Icon Name="@(_busy ? "refresh" : "trophy")" Size="16" Class="@(_busy ? "spin" : null)" /> Recompute rankings
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:16px">
+        <StatCard Label="Active devices · 7d" Icon="smartphone" Value="@_d.ActiveDevices7d" Previous="@_d.ActiveDevicesPrev7d"
+                  Spark="@_d.Days.Select(x => (double)x.NewDevices).ToList()" Foot="@($"{_d.Devices:N0} all time")" />
+        <StatCard Label="Sessions · 7d" Icon="swords" Value="@_d.Sessions7d" Previous="@_d.SessionsPrev7d"
+                  Spark="@_d.Days.Select(x => (double)x.Sessions).ToList()" Foot="@($"{_d.Sessions:N0} all time")" Color="#ff5d7a" />
+        <StatCard Label="Answers · 7d" Icon="zap" Value="@_d.Answers7d" Previous="@_d.AnswersPrev7d"
+                  Spark="@_d.Days.Select(x => (double)x.Answers).ToList()" Foot="@($"{_d.Answers:N0} taps all time")" Color="#14b8a6" />
+        <StatCard Label="Completion rate" Icon="target" Text="@Pct((int)Math.Round(_d.CompletionRate * 1000), 1000)" Foot="Goal ≥ 60% (scope §3)"
+                  Badge="@(_d.CompletionRate >= .6 ? "On track" : "Below goal")" BadgeKind="@(_d.CompletionRate >= .6 ? "good" : "warn")" />
+    </div>
+
+    <div class="grid grid-main" style="margin-bottom:16px">
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <h2>Engagement</h2>
+                    <div class="sub">Answers per day, with new sessions for comparison</div>
+                </div>
+                <div class="right chart-legend">
+                    <span><i style="background:var(--brand)"></i>Answers</span>
+                    <span><i style="background:var(--brand-2)"></i>Sessions ×20</span>
+                </div>
+            </div>
+            <div style="padding:14px 18px 8px">
+                <AreaChart Values="@_d.Days.Select(x => (double)x.Answers).ToList()"
+                           Secondary="@_d.Days.Select(x => x.Sessions * 20.0).ToList()"
+                           Labels="@_d.Days.Select(x => x.Day.ToString("d MMM", CultureInfo.InvariantCulture)).ToList()"
+                           Label="Answers per day" />
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><div><h2>Platforms &amp; modes</h2><div class="sub">Who plays, and how</div></div></div>
+            <div class="donut-wrap">
+                <Donut Center="@Palette.Compact(_d.Devices)" Caption="devices"
+                       Slices="@([new("Android", _d.Android, "#22c55e"), new("iOS", _d.Ios, "#7c5cff"), new("Other", Math.Max(0, _d.Devices - _d.Android - _d.Ios), "#94a3b8")])" />
+                <div class="legend-list">
+                    <div><span class="swatch" style="background:#22c55e"></span>Android<b>@Pct(_d.Android, _d.Devices)</b></div>
+                    <div><span class="swatch" style="background:#7c5cff"></span>iOS<b>@Pct(_d.Ios, _d.Devices)</b></div>
+                    @foreach (var (mode, count) in _d.Modes)
+                    {
+                        <div><span class="swatch" style="background:@(mode.StartsWith("Smart") ? "var(--brand)" : "var(--brand-2)")"></span>@mode<b>@Pct(count, _d.Sessions)</b></div>
+                    }
+                    <div><span class="swatch" style="background:var(--bad)"></span>Blocked devices<b>@_d.BlockedDevices</b></div>
+                </div>
+            </div>
+            <div style="padding:0 20px 18px">
+                <div class="small muted" style="margin-bottom:8px">Sessions by level</div>
+                <div class="tier-bar" style="height:10px">
+                    @{ var lv = Math.Max(1, _d.Levels.Sum(l => l.Count)); var colors = new[] { "#22c55e", "#7c5cff", "#ff5d7a", "#f59e0b" }; }
+                    @for (int i = 0; i < _d.Levels.Count; i++)
+                    {
+                        <span title="@_d.Levels[i].Level" style="background:@colors[i % 4];width:@((100.0 * _d.Levels[i].Count / lv).ToString("0.#", CultureInfo.InvariantCulture))%"></span>
+                    }
+                </div>
+                <div class="row wrap small" style="margin-top:8px;gap:14px">
+                    @for (int i = 0; i < _d.Levels.Count; i++)
+                    {
+                        <span><span class="swatch" style="display:inline-block;background:@colors[i % 4];margin-right:6px"></span>@_d.Levels[i].Level <b class="num">@_d.Levels[i].Count</b></span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-main">
+        <div class="card">
+            <div class="card-head">
+                <div><h2>Topics</h2><div class="sub">Play volume and media coverage</div></div>
+                <div class="right"><a class="btn sm" href="topics">Manage <Icon Name="arrow-right" Size="14" /></a></div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th>Topic</th><th class="right">Sessions</th><th class="right">Answers</th><th>Finished</th><th>Media coverage</th></tr></thead>
+                    <tbody>
+                        @{ var maxS = Math.Max(1, _d.TopicStats.Max(t => t.Sessions)); }
+                        @foreach (var t in _d.TopicStats.OrderByDescending(t => t.Sessions))
+                        {
+                            <tr class="clickable" @onclick="@(() => Nav.NavigateTo($"topics/{t.Slug}"))">
+                                <td>
+                                    <div class="cell-main">
+                                        <span class="emoji-chip" style="background:@Palette.Cover(t.Accent)">@t.Emoji</span>
+                                        <div>
+                                            <div class="cell-title">@t.Name</div>
+                                            <div class="bar-track" style="width:140px;height:5px;margin-top:5px"><div class="bar-fill" style="width:@W(t.Sessions, maxS);background:@t.Accent"></div></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="right num">@t.Sessions.ToString("N0")</td>
+                                <td class="right num">@t.Answers.ToString("N0")</td>
+                                <td><span class="chip @(t.Sessions > 0 && (double)t.Finished / t.Sessions >= .6 ? "good" : "warn")">@Pct(t.Finished, t.Sessions)</span></td>
+                                <td>
+                                    <div class="row"><div class="progress" style="flex:1"><span style="width:@W(t.ItemsWithImage, Math.Max(1, t.Items))"></span></div><span class="small muted num">@t.ItemsWithImage/@t.Items</span></div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="stack">
+            <div class="hero-banner">
+                <div style="position:relative;z-index:1">
+                    <div class="small" style="opacity:.85;font-weight:600">Media coverage</div>
+                    <div style="font-family:var(--display);font-size:34px;font-weight:750;letter-spacing:-.03em">@Pct(_d.ItemsWithImage, _d.Items)</div>
+                    <div class="small" style="opacity:.9;margin-bottom:14px">of @_d.Items items have a licensed image. The goal is 90% for posters and photos.</div>
+                    <a class="btn sm" href="media"><Icon Name="image" Size="14" /> Open media library</a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-head"><h2>Recent activity</h2><div class="right"><a class="btn sm ghost" href="activity">All</a></div></div>
+                <div class="feed">
+                    @if (_d.Recent.Count == 0)
+                    {
+                        <div class="empty">Nothing yet.</div>
+                    }
+                    @foreach (var a in _d.Recent)
+                    {
+                        <div class="feed-item">
+                            <div class="feed-icon"><Icon Name="@ActivityIcon(a.Action)" Size="15" /></div>
+                            <div style="min-width:0">
+                                <div><b>@a.Subject</b> <span class="muted">· @a.Action</span></div>
+                                <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@a.Details</div>
+                            </div>
+                            <div class="small muted" style="margin-left:auto;white-space:nowrap">@Palette.Ago(a.At, Clock.GetUtcNow())</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private DashboardData? _d;
+    private bool _busy;
+
+    private string Greeting
+    {
+        get
+        {
+            var hour = Clock.GetLocalNow().Hour;
+            return hour >= 18 ? "Good evening" : hour >= 12 ? "Good afternoon" : "Good morning";
+        }
+    }
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load() => _d = await Queries.DashboardAsync();
+
+    private async Task Recompute()
+    {
+        _busy = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var r = await scope.ServiceProvider.GetRequiredService<GlobalRankingService>().RecomputeAsync();
+            await scope.ServiceProvider.GetRequiredService<AuditLogger>()
+                .LogAsync("rankings.recompute", "All topics", $"{r.Comparisons:N0} answers from {r.Devices} devices in {r.Elapsed.TotalMilliseconds:0} ms");
+            Toast.Show($"Rankings refreshed from {r.Comparisons:N0} answers in {r.Elapsed.TotalMilliseconds:0} ms");
+            await Load();
+        }
+        finally { _busy = false; }
+    }
+
+    private static string Pct(int part, int whole) => whole == 0 ? "0%" : ((double)part / whole).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", "");
+    private static string W(int part, int whole) => (100.0 * part / Math.Max(1, whole)).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+
+    public static string ActivityIcon(string action) => action.Split('.')[0] switch
+    {
+        "media" => "image",
+        "rankings" => "trophy",
+        "device" => "shield",
+        "topic" => "grid",
+        "item" => "edit",
+        "level" => "sliders",
+        "asset" => "ban",
+        _ => "activity",
+    };
+}

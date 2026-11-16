@@ -1,0 +1,82 @@
+@page "/sessions"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+
+<PageTitle>Sessions · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="swords" Size="14" /> Uploaded from devices</div>
+        <h1>Sessions</h1>
+        <p>Each session is one person ranking one topic. Devices upload the full answer history, so what you see here is exactly what they played.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="toolbar">
+        <div class="segmented">
+            @foreach (var f in new[] { "All", "Active", "Finished", "Abandoned" })
+            {
+                <button class="@(_status == f ? "on" : "")" @onclick="@(() => { _status = f; _page = 0; })">@f</button>
+            }
+        </div>
+        <select class="select" style="width:auto" @bind="_topic" @bind:after="@(() => _page = 0)">
+            <option value="">All topics</option>
+            @foreach (var t in _topics) { <option value="@t.Slug">@t.Emoji @t.Name</option> }
+        </select>
+        <span class="small muted" style="margin-left:auto">@Filtered.Count().ToString("N0") sessions</span>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>Topic</th><th>Level</th><th>Mode</th><th>Progress</th><th>Status</th><th>Device</th><th class="right">Updated</th></tr></thead>
+            <tbody>
+                @foreach (var s in Filtered.Skip(_page * PageSize).Take(PageSize))
+                {
+                    <tr class="clickable" @onclick="@(() => Nav.NavigateTo($"sessions/{s.Id}"))">
+                        <td><div class="cell-main"><span class="emoji-chip" style="background:@Palette.Cover(s.Accent)">@s.Emoji</span><b>@s.Topic</b></div></td>
+                        <td><span class="chip outline">@s.Level</span></td>
+                        <td class="small">@(s.Mode == "smart" ? "Smart duels" : "King of the hill")</td>
+                        <td style="min-width:160px">
+                            <div class="row"><div class="progress" style="flex:1"><span style="width:@((100.0 * Math.Min(1, (double)s.Answers / Math.Max(1, s.Target))).ToString("0", CultureInfo.InvariantCulture))%"></span></div><span class="small muted num">@s.Answers/@s.Target</span></div>
+                        </td>
+                        <td><StatusChip Status="@s.Status" /></td>
+                        <td class="mono muted">@s.Device.ToString()[..8]</td>
+                        <td class="right small muted">@Palette.Ago(s.Updated, Clock.GetUtcNow())</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="toolbar" style="border-top:1px solid var(--border);border-bottom:0;justify-content:flex-end">
+        <span class="small muted">Page @(_page + 1) of @Math.Max(1, (int)Math.Ceiling(Filtered.Count() / (double)PageSize))</span>
+        <button class="btn sm icon-only" disabled="@(_page == 0)" @onclick="@(() => _page--)"><Icon Name="chevron-left" Size="15" /></button>
+        <button class="btn sm icon-only" disabled="@((_page + 1) * PageSize >= Filtered.Count())" @onclick="@(() => _page++)"><Icon Name="chevron-right" Size="15" /></button>
+    </div>
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private sealed record Row(Guid Id, string Slug, string Topic, string Emoji, string Accent, string Level, string Mode, int Answers, int Target, SessionStatus Status, Guid Device, DateTimeOffset Updated);
+    private List<Row> _rows = [];
+    private List<Topic> _topics = [];
+    private string _status = "All", _topic = "";
+    private int _page;
+
+    private IEnumerable<Row> Filtered => _rows
+        .Where(r => _status == "All" || r.Status.ToString() == _status)
+        .Where(r => _topic.Length == 0 || r.Slug == _topic);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _topics = await db.Topics.AsNoTracking().OrderBy(t => t.SortOrder).ToListAsync();
+        var levels = await db.Levels.AsNoTracking().ToDictionaryAsync(l => l.Id, l => $"{l.Emoji} {l.Name}");
+        _rows = (await db.Sessions.AsNoTracking()
+                .Select(s => new { s.Id, s.Topic!.Slug, s.Topic.Name, s.Topic.Emoji, s.Topic.Accent, s.LevelId, s.Mode, Answers = s.Comparisons.Count, s.TargetRounds, s.Status, s.DeviceId, s.UpdatedAt })
+                .ToListAsync())
+            .OrderByDescending(s => s.UpdatedAt)
+            .Select(s => new Row(s.Id, s.Slug, s.Name, s.Emoji, s.Accent, levels.GetValueOrDefault(s.LevelId, s.LevelId), s.Mode, s.Answers, s.TargetRounds, s.Status, s.DeviceId, s.UpdatedAt))
+            .ToList();
+    }
+}

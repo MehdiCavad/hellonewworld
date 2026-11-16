@@ -1,0 +1,59 @@
+@page "/search"
+@inject IDbContextFactory<RankdDbContext> Factory
+
+<PageTitle>Search · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="search" Size="14" /> Search</div>
+        <h1>“@Q”</h1>
+        <p>@_items.Count item(s) and @_topics.Count topic(s) match.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table class="table">
+            <tbody>
+                @foreach (var t in _topics)
+                {
+                    <tr class="clickable" @onclick="@(() => Nav.NavigateTo($"topics/{t.Slug}"))">
+                        <td><div class="cell-main"><span class="emoji-chip" style="background:@Palette.Cover(t.Accent)">@t.Emoji</span><b>@t.Name</b><span class="chip outline">Topic</span></div></td>
+                    </tr>
+                }
+                @foreach (var i in _items)
+                {
+                    <tr class="clickable" @onclick="@(() => Nav.NavigateTo($"topics/{i.Topic!.Slug}"))">
+                        <td>
+                            <div class="cell-main">
+                                <Thumb Name="@i.Name" Accent="@i.Topic!.Accent" />
+                                <div><div class="cell-title">@i.Name</div><div class="cell-sub">@i.Detail · @i.Topic.Emoji @i.Topic.Name</div></div>
+                                <span class="chip tier tier-@i.Tier" style="margin-left:auto">@i.Tier</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (_items.Count + _topics.Count == 0)
+        {
+            <div class="empty"><div class="icon-ring"><Icon Name="search" Size="22" /></div>Nothing matches.</div>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Q { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private List<Item> _items = [];
+    private List<Topic> _topics = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var q = (Q ?? "").Trim();
+        await using var db = await Factory.CreateDbContextAsync();
+        if (q.Length == 0) { _items = []; _topics = []; return; }
+        _topics = await db.Topics.AsNoTracking().Where(t => t.Name.Contains(q)).ToListAsync();
+        _items = await db.Items.AsNoTracking().Include(i => i.Topic).Where(i => i.Name.Contains(q) || i.Detail.Contains(q)).OrderBy(i => i.Name).Take(100).ToListAsync();
+    }
+}

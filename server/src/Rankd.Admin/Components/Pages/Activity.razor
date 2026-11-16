@@ -1,0 +1,47 @@
+@page "/activity"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject TimeProvider Clock
+
+<PageTitle>Activity log · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="activity" Size="14" /> Audit trail</div>
+        <h1>Activity log</h1>
+        <p>Every curation change made in this panel, newest first.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="feed">
+        @if (_entries.Count == 0)
+        {
+            <div class="empty"><div class="icon-ring"><Icon Name="activity" Size="22" /></div>No changes yet.</div>
+        }
+        @foreach (var group in _entries.GroupBy(e => e.At.ToLocalTime().Date))
+        {
+            <div class="nav-label" style="padding:14px 20px 6px">@group.Key.ToString("dddd, d MMMM", CultureInfo.InvariantCulture)</div>
+            @foreach (var a in group)
+            {
+                <div class="feed-item">
+                    <div class="feed-icon"><Icon Name="@Pages.Dashboard.ActivityIcon(a.Action)" Size="15" /></div>
+                    <div style="flex:1;min-width:0">
+                        <div><b>@a.Subject</b> <span class="chip outline" style="height:20px;margin-left:6px">@a.Action</span></div>
+                        <div class="small muted">@a.Details</div>
+                    </div>
+                    <div class="small muted" style="white-space:nowrap">@a.At.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture) · @a.Actor</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<AuditEntry> _entries = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _entries = await db.AuditLog.AsNoTracking().OrderByDescending(a => a.At).Take(300).ToListAsync();
+    }
+}

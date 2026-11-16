@@ -1,0 +1,220 @@
+@page "/topics"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject Toasts Toast
+@inject IServiceScopeFactory Scopes
+@inject TimeProvider Clock
+
+<PageTitle>Topics · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="grid" Size="14" /> Catalogue</div>
+        <h1>Topics</h1>
+        <p>Each topic is a themed catalogue. Its accent colour drives the card gradient in the app, and its media source decides where posters, photos and previews come from.</p>
+    </div>
+    <div class="actions">
+        <button class="btn primary" @onclick="New"><Icon Name="plus" Size="16" /> New topic</button>
+    </div>
+</div>
+
+@if (_topics is null)
+{
+    <div class="topic-grid">@for (int i = 0; i < 6; i++) { <div class="card skeleton" style="height:240px"></div> }</div>
+}
+else
+{
+    <div class="topic-grid">
+        @foreach (var t in _topics)
+        {
+            <div class="card topic-card" style="@(t.Topic.IsActive ? "" : "opacity:.6")">
+                <a href="topics/@t.Topic.Slug">
+                    <div class="topic-cover" style="background:@Palette.Cover(t.Topic.Accent)">
+                        <span class="big-emoji">@t.Topic.Emoji</span>
+                        <h2>@t.Topic.Name</h2>
+                    </div>
+                </a>
+                <div class="topic-body">
+                    <div class="muted" style="min-height:21px">@t.Topic.Description</div>
+                    <div>
+                        <div class="tier-bar">
+                            @foreach (var tier in new[] { 1, 2, 3 })
+                            {
+                                <span style="flex:@t.Tiers.GetValueOrDefault(tier)"></span>
+                            }
+                        </div>
+                        <div class="row small muted" style="margin-top:6px;gap:12px">
+                            <span><b style="color:var(--text)">@t.Tiers.GetValueOrDefault(1)</b> famous</span>
+                            <span><b style="color:var(--text)">@t.Tiers.GetValueOrDefault(2)</b> known</span>
+                            <span><b style="color:var(--text)">@t.Tiers.GetValueOrDefault(3)</b> deep cuts</span>
+                        </div>
+                    </div>
+                    <div class="metric-row">
+                        <span><b>@t.Sessions.ToString("N0")</b> sessions</span>
+                        <span><b>@t.Images</b>/@t.Items with media</span>
+                    </div>
+                    <div class="row" style="justify-content:space-between">
+                        <span class="chip outline"><Icon Name="@(t.Topic.MediaKind.StartsWith("itunes") ? "music" : "globe")" Size="13" /> @MediaLabel(t.Topic.MediaKind)</span>
+                        <div class="row" style="gap:6px">
+                            <label class="switch" title="@(t.Topic.IsActive ? "Live in the app" : "Hidden from the app")">
+                                <input type="checkbox" checked="@t.Topic.IsActive" @onchange="@(() => ToggleActive(t.Topic))" />
+                                <span></span>
+                            </label>
+                            <button class="btn sm icon-only ghost" title="Edit" @onclick="@(() => Edit(t.Topic))"><Icon Name="edit" Size="15" /></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (_editing is not null)
+{
+    <div class="scrim" @onclick="Close"></div>
+    <div class="drawer" role="dialog" aria-label="Edit topic">
+        <div class="drawer-head">
+            <div class="thumb lg" style="background:@Palette.Cover(_editing.Accent);font-size:26px">@_editing.Emoji</div>
+            <div>
+                <h2>@(_editing.Id == 0 ? "New topic" : _editing.Name)</h2>
+                <div class="small muted">@(_editing.Id == 0 ? "Add items after saving" : $"/{_editing.Slug}")</div>
+            </div>
+            <button class="btn icon-only ghost" style="margin-left:auto" @onclick="Close"><Icon Name="x" /></button>
+        </div>
+        <div class="drawer-body">
+            <div class="form-grid">
+                <div class="field"><label>Name</label><input class="input" @bind="_editing.Name" @bind:event="oninput" /></div>
+                <div class="field"><label>Emoji</label><input class="input" @bind="_editing.Emoji" @bind:event="oninput" maxlength="8" /></div>
+                <div class="field full"><label>Description</label><input class="input" @bind="_editing.Description" maxlength="400" /><span class="hint">Shown under the topic name in the app.</span></div>
+                <div class="field">
+                    <label>Slug</label>
+                    <input class="input mono" @bind="_editing.Slug" disabled="@(_editing.Id != 0)" />
+                    <span class="hint">Used in API URLs. Fixed once created.</span>
+                </div>
+                <div class="field">
+                    <label>Media source</label>
+                    <select class="select" @bind="_editing.MediaKind">
+                        @foreach (var k in MediaKinds.All) { <option value="@k">@MediaLabel(k)</option> }
+                    </select>
+                </div>
+                <div class="field full">
+                    <label>Accent colour</label>
+                    <div class="row wrap">
+                        @foreach (var c in Swatches)
+                        {
+                            <button class="btn icon-only" title="@c" style="background:@c;border:3px solid @(c.Equals(_editing.Accent, StringComparison.OrdinalIgnoreCase) ? "var(--text)" : "transparent")" @onclick="@(() => _editing.Accent = c)"></button>
+                        }
+                        <input class="input mono" style="width:110px" @bind="_editing.Accent" @bind:event="oninput" />
+                    </div>
+                </div>
+                <div class="field"><label>Sort order</label><input class="input" type="number" @bind="_editing.SortOrder" /></div>
+            </div>
+            <div class="topic-cover card" style="background:@Palette.Cover(_editing.Accent);border-radius:16px;height:130px">
+                <span class="big-emoji">@_editing.Emoji</span>
+                <h2>@(string.IsNullOrWhiteSpace(_editing.Name) ? "Preview" : _editing.Name)</h2>
+            </div>
+            @if (_error is not null) { <div class="chip bad">@_error</div> }
+        </div>
+        <div class="drawer-foot">
+            <button class="btn" @onclick="Close">Cancel</button>
+            <button class="btn primary" @onclick="Save"><Icon Name="check" Size="16" /> Save topic</button>
+        </div>
+    </div>
+}
+
+@code {
+    private sealed record Row(Topic Topic, int Items, int Images, int Sessions, Dictionary<int, int> Tiers);
+    private List<Row>? _topics;
+    private Topic? _editing;
+    private string? _error;
+
+    private static readonly string[] Swatches = ["#FF5D5D", "#FF8A3D", "#F59E0B", "#22C55E", "#14B8A6", "#3B82F6", "#7C5CFF", "#B26BFF", "#F0499B"];
+
+    public static string MediaLabel(string kind) => kind switch
+    {
+        MediaKinds.Wikipedia => "Wikimedia photos",
+        MediaKinds.ItunesMovie => "iTunes posters",
+        MediaKinds.ItunesSong => "iTunes covers + previews",
+        MediaKinds.ItunesTvSeason => "iTunes season art",
+        _ => kind,
+    };
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var topics = await db.Topics.AsNoTracking().OrderBy(t => t.SortOrder).ThenBy(t => t.Name).ToListAsync();
+        var items = await db.Items.AsNoTracking().Where(i => i.IsActive)
+            .Select(i => new { i.TopicId, i.Tier, HasImage = i.Assets.Any(a => a.IsEnabled && a.Type == AssetType.Image) }).ToListAsync();
+        var sessions = await db.Sessions.AsNoTracking().GroupBy(s => s.TopicId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count);
+        _topics = topics.Select(t =>
+        {
+            var mine = items.Where(i => i.TopicId == t.Id).ToList();
+            return new Row(t, mine.Count, mine.Count(i => i.HasImage), sessions.GetValueOrDefault(t.Id),
+                mine.GroupBy(i => i.Tier).ToDictionary(g => g.Key, g => g.Count()));
+        }).ToList();
+    }
+
+    private void New()
+    {
+        _error = null;
+        _editing = new Topic { Slug = "", Name = "", Emoji = "✨", SortOrder = (_topics?.Count ?? 0) + 1, Accent = Swatches[(_topics?.Count ?? 0) % Swatches.Length] };
+    }
+
+    private void Edit(Topic t)
+    {
+        _error = null;
+        _editing = new Topic
+        {
+            Id = t.Id, Slug = t.Slug, Name = t.Name, Emoji = t.Emoji, Description = t.Description, MediaKind = t.MediaKind,
+            Accent = t.Accent, SortOrder = t.SortOrder, IsActive = t.IsActive,
+        };
+    }
+
+    private void Close() => _editing = null;
+
+    private async Task Save()
+    {
+        if (_editing is null) return;
+        if (string.IsNullOrWhiteSpace(_editing.Name)) { _error = "A topic needs a name."; return; }
+        if (_editing.Id == 0 && string.IsNullOrWhiteSpace(_editing.Slug))
+            _editing.Slug = string.Concat(_editing.Name.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
+
+        await using var db = await Factory.CreateDbContextAsync();
+        if (_editing.Id == 0 && await db.Topics.AnyAsync(t => t.Slug == _editing.Slug)) { _error = $"The slug '{_editing.Slug}' is taken."; return; }
+
+        var now = Clock.GetUtcNow();
+        var topic = _editing.Id == 0 ? db.Topics.Add(new Topic { Slug = _editing.Slug, Name = _editing.Name, CreatedAt = now }).Entity
+            : await db.Topics.FirstAsync(t => t.Id == _editing.Id);
+        topic.Name = _editing.Name.Trim();
+        topic.Emoji = _editing.Emoji.Trim();
+        topic.Description = _editing.Description?.Trim() ?? "";
+        topic.MediaKind = _editing.MediaKind;
+        topic.Accent = _editing.Accent;
+        topic.SortOrder = _editing.SortOrder;
+        topic.UpdatedAt = now;
+        await db.SaveChangesAsync();
+        await Audit(_editing.Id == 0 ? "topic.create" : "topic.update", topic.Name, $"/{topic.Slug} · {MediaLabel(topic.MediaKind)}");
+        Toast.Show(_editing.Id == 0 ? $"Created {topic.Name}" : $"Saved {topic.Name}");
+        _editing = null;
+        await Load();
+    }
+
+    private async Task ToggleActive(Topic t)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var topic = await db.Topics.FirstAsync(x => x.Id == t.Id);
+        topic.IsActive = !topic.IsActive;
+        topic.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await Audit(topic.IsActive ? "topic.publish" : "topic.hide", topic.Name);
+        Toast.Show(topic.IsActive ? $"{topic.Name} is live in the app" : $"{topic.Name} is hidden from the app");
+        await Load();
+    }
+
+    private async Task Audit(string action, string subject, string details = "")
+    {
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync(action, subject, details);
+    }
+}

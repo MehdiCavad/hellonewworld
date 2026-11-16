@@ -33,7 +33,7 @@ public sealed class DemoActivitySeeder(RankdDbContext db, GlobalRankingService g
         for (int d = 0; d < devicesTotal; d++)
         {
             // Adoption grows over the month: later days get more new devices.
-            var firstSeen = now.AddDays(-30 * Math.Pow(rng(), 0.7)).AddMinutes(-rng() * 600);
+            var firstSeen = now.AddDays(-30 * Math.Pow(rng(), 1.45)).AddMinutes(-rng() * 600);
             var device = new Device
             {
                 Id = Guid.NewGuid(), FirstSeenAt = firstSeen, LastSeenAt = firstSeen,
@@ -91,7 +91,7 @@ public sealed class DemoActivitySeeder(RankdDbContext db, GlobalRankingService g
                 db.Sessions.Add(record);
                 device.LastSeenAt = t;
                 sessionCount++;
-                at = t.AddHours(2 + rng() * 120);
+                at = t.AddHours(2 + rng() * 70);
             }
         }
 

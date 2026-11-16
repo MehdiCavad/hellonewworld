@@ -31,7 +31,9 @@ public static class DependencyInjection
         var connection = config.GetConnectionString("Rankd")
                          ?? throw new InvalidOperationException("Connection string 'Rankd' is missing.");
 
-        services.AddDbContext<RankdDbContext>(db =>
+        // The factory also registers a scoped RankdDbContext; Blazor Server pages use
+        // the factory directly so each operation gets a short-lived context.
+        services.AddDbContextFactory<RankdDbContext>(db =>
         {
             if (options.Provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
                 db.UseSqlite(connection);

@@ -1,0 +1,9 @@
+<span class="chip @(Status switch { SessionStatus.Finished => "good", SessionStatus.Active => "brand", _ => "" })">
+    @if (Status == SessionStatus.Finished) { <Icon Name="check" Size="12" Stroke="2.6" /> }
+    else if (Status == SessionStatus.Active) { <Icon Name="clock" Size="12" Stroke="2.4" /> }
+    @Status
+</span>
+
+@code {
+    [Parameter] public SessionStatus Status { get; set; }
+}

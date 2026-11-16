@@ -1,0 +1,40 @@
+<div class="card stat">
+    <div class="stat-label">
+        <span class="stat-icon" style="@(Color is null ? "" : $"background:color-mix(in srgb, {Color} 14%, transparent);color:{Color}")"><Icon Name="@Icon" Size="15" /></span>
+        @Label
+    </div>
+    <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div class="stat-value">@(Text ?? Value.ToString("N0"))</div>
+        @if (Spark is { Count: > 1 })
+        {
+            <Sparkline Values="@Spark" Color="@(Color ?? "var(--brand)")" />
+        }
+    </div>
+    <div class="stat-foot">
+        <span>@Foot</span>
+        @if (Previous is { } prev)
+        {
+            var change = prev == 0 ? (Value > 0 ? 1 : 0) : (Value - prev) / (double)prev;
+            <span class="delta @(change > 0.005 ? "up" : change < -0.005 ? "down" : "flat")">
+                <Icon Name="@(change >= 0 ? "arrow-up" : "arrow-down")" Size="11" Stroke="2.6" />@Math.Abs(change).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", "")
+            </span>
+        }
+        else if (Badge is not null)
+        {
+            <span class="chip @BadgeKind">@Badge</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "activity";
+    [Parameter] public int Value { get; set; }
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public int? Previous { get; set; }
+    [Parameter] public IReadOnlyList<double>? Spark { get; set; }
+    [Parameter] public string? Foot { get; set; }
+    [Parameter] public string? Color { get; set; }
+    [Parameter] public string? Badge { get; set; }
+    [Parameter] public string BadgeKind { get; set; } = "";
+}
