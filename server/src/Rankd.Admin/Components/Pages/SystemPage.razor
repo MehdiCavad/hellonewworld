@@ -1,0 +1,52 @@
+@page "/system"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IWebHostEnvironment Env
+@inject DatabaseOptions DbOptions
+@inject IConfiguration Config
+
+<PageTitle>System · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="settings" Size="14" /> Runtime</div>
+        <h1>System</h1>
+        <p>What this panel is connected to. There is no sign-in in this phase, so the panel only answers requests from the networks listed below.</p>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card card-pad">
+        <h2 style="margin-bottom:14px">Runtime</h2>
+        <dl class="kv">
+            <dt>Environment</dt><dd>@Env.EnvironmentName</dd>
+            <dt>.NET</dt><dd>@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</dd>
+            <dt>OS</dt><dd>@System.Runtime.InteropServices.RuntimeInformation.OSDescription</dd>
+            <dt>Machine</dt><dd>@Environment.MachineName · @Environment.ProcessorCount cores</dd>
+            <dt>Admin networks</dt><dd>@string.Join(", ", Config.GetSection("Admin:AllowedNetworks").Get<string[]>() ?? ["127.0.0.0/8"])</dd>
+        </dl>
+    </div>
+    <div class="card card-pad">
+        <h2 style="margin-bottom:14px">Database</h2>
+        <dl class="kv">
+            <dt>Provider</dt><dd>@(DbOptions.Provider == "Sqlite" ? "SQLite (local development)" : "Microsoft SQL Server")</dd>
+            <dt>Can connect</dt><dd>@(_canConnect ? "Yes" : "No")</dd>
+            <dt>Applied migrations</dt><dd>@(_migrations ?? "n/a for SQLite (created from the model)")</dd>
+            <dt>Rows</dt><dd>@_counts</dd>
+        </dl>
+    </div>
+</div>
+
+@code {
+    private bool _canConnect;
+    private string? _migrations;
+    private string _counts = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _canConnect = await db.Database.CanConnectAsync();
+        if (!db.Database.IsSqlite()) _migrations = string.Join(", ", await db.Database.GetAppliedMigrationsAsync());
+        _counts = $"{await db.Topics.CountAsync()} topics · {await db.Items.CountAsync():N0} items · {await db.Assets.CountAsync():N0} assets · " +
+                  $"{await db.Devices.CountAsync():N0} devices · {await db.Sessions.CountAsync():N0} sessions · {await db.Comparisons.CountAsync():N0} answers";
+    }
+}

@@ -1,0 +1,395 @@
+@page "/topics/{Slug}"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+@inject TimeProvider Clock
+
+<PageTitle>@(_topic?.Name ?? "Topic") · Rankd Admin</PageTitle>
+
+@if (_topic is null)
+{
+    <div class="card skeleton" style="height:160px"></div>
+}
+else
+{
+    <div class="topic-cover card" style="background:@Palette.Cover(_topic.Accent);height:150px;border-radius:20px;margin-bottom:20px;padding:22px 26px;border:0">
+        <span class="big-emoji" style="font-size:96px;right:28px;top:4px">@_topic.Emoji</span>
+        <div style="position:relative;z-index:1">
+            <a href="topics" class="small" style="opacity:.85;display:inline-flex;align-items:center;gap:4px"><Icon Name="chevron-left" Size="14" /> All topics</a>
+            <h1 style="color:#fff;font-size:32px;margin-top:4px">@_topic.Name</h1>
+            <div style="opacity:.9">@_topic.Description · @Topics.MediaLabel(_topic.MediaKind)</div>
+        </div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:16px">
+        <StatCard Label="Items" Icon="layers" Value="@_items.Count(i => i.Item.IsActive)" Foot="@($"{_items.Count(i => !i.Item.IsActive)} hidden")" />
+        <StatCard Label="With media" Icon="image" Text="@($"{_items.Count(i => i.Image is not null)}/{_items.Count}")" Foot="Licensed, enabled images" Color="#14b8a6" />
+        <StatCard Label="Sessions" Icon="swords" Value="@_sessions" Foot="All levels" Color="#ff5d7a" />
+        <StatCard Label="Community #1" Icon="trophy" Text="@(_items.Where(i => i.Rank == 1).Select(i => i.Item.Name).FirstOrDefault() ?? "—")" Foot="From the latest recompute" Color="#f59e0b" />
+    </div>
+
+    <div class="card">
+        <div class="toolbar">
+            <div class="search"><Icon Name="search" Size="16" /><input placeholder="Filter items" @bind="_filter" @bind:event="oninput" /></div>
+            <div class="segmented">
+                @foreach (var (label, tier) in new[] { ("All", 0), ("Famous", 1), ("Known", 2), ("Deep cuts", 3) })
+                {
+                    <button class="@(_tier == tier ? "on" : "")" @onclick="@(() => _tier = tier)">@label</button>
+                }
+            </div>
+            <label class="row small muted" style="gap:8px;cursor:pointer">
+                <label class="switch"><input type="checkbox" @bind="_missingOnly" /><span></span></label> Missing media only
+            </label>
+            <div style="margin-left:auto" class="row">
+                <button class="btn" @onclick="@(() => _bulkOpen = true)"><Icon Name="plus" Size="16" /> Add items</button>
+                <button class="btn primary" disabled="@_ingesting" @onclick="FetchMissing">
+                    <Icon Name="@(_ingesting ? "refresh" : "download")" Size="16" Class="@(_ingesting ? "spin" : null)" /> @(_ingesting ? "Fetching…" : "Fetch missing media")
+                </button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr><th>Item</th><th>Tier</th><th>Media</th><th class="right">Community</th><th class="right">Record</th><th>Live</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Visible)
+                    {
+                        var i = row.Item;
+                        <tr class="@(i.IsActive ? "" : "dim")" @key="i.Id">
+                            <td>
+                                <div class="cell-main">
+                                    <Thumb Url="@row.Image" Name="@i.Name" Accent="@_topic.Accent" />
+                                    <div style="min-width:0">
+                                        <div class="cell-title">@i.Name</div>
+                                        <div class="cell-sub">@i.Detail@(i.WikiTitle is null ? "" : $" · {i.WikiTitle}")</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><button class="chip tier tier-@i.Tier" title="Click to change tier" @onclick="@(() => CycleTier(i))">@i.Tier</button></td>
+                            <td>
+                                @if (row.Image is not null)
+                                {
+                                    <span class="chip good"><Icon Name="check" Size="12" Stroke="2.6" /> @row.Provider</span>
+                                }
+                                else if (row.DisabledAssets > 0)
+                                {
+                                    <span class="chip bad"><Icon Name="ban" Size="12" /> Disabled</span>
+                                }
+                                else
+                                {
+                                    <span class="chip warn">Text card</span>
+                                }
+                                @if (row.HasAudio) { <span class="chip brand" style="margin-left:4px"><Icon Name="music" Size="12" /> Preview</span> }
+                            </td>
+                            <td class="right">
+                                @if (row.Rank is { } r)
+                                {
+                                    <span class="num" style="font-weight:600">#@r</span>
+                                    <span class="small muted num"> · @Math.Round(row.Rating)</span>
+                                }
+                                else { <span class="muted">—</span> }
+                            </td>
+                            <td class="right num small"><span style="color:var(--good)">@row.Wins</span>–<span style="color:var(--bad)">@row.Losses</span></td>
+                            <td><label class="switch"><input type="checkbox" checked="@i.IsActive" @onchange="@(() => ToggleItem(i))" /><span></span></label></td>
+                            <td class="right"><button class="btn sm" @onclick="@(() => Open(row))"><Icon Name="edit" Size="14" /> Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (!Visible.Any())
+            {
+                <div class="empty"><div class="icon-ring"><Icon Name="filter" Size="22" /></div>No items match these filters.</div>
+            }
+        </div>
+    </div>
+}
+
+@if (_open is not null && _topic is not null)
+{
+    <div class="scrim" @onclick="@(() => _open = null)"></div>
+    <div class="drawer" role="dialog" aria-label="Edit item">
+        <div class="drawer-head">
+            <Thumb Url="@_open.Image" Name="@_edit.Name" Accent="@_topic.Accent" Size="lg" />
+            <div style="min-width:0">
+                <h2>@_edit.Name</h2>
+                <div class="small muted">@_topic.Name · item #@_edit.Id</div>
+            </div>
+            <button class="btn icon-only ghost" style="margin-left:auto" @onclick="@(() => _open = null)"><Icon Name="x" /></button>
+        </div>
+        <div class="drawer-body">
+            <div class="form-grid">
+                <div class="field full"><label>Name</label><input class="input" @bind="_edit.Name" @bind:event="oninput" /></div>
+                <div class="field"><label>Detail</label><input class="input" @bind="_edit.Detail" /><span class="hint">Year, country or artist.</span></div>
+                <div class="field">
+                    <label>Tier</label>
+                    <div class="segmented">
+                        @foreach (var (label, tier) in new[] { ("Famous", 1), ("Known", 2), ("Deep cut", 3) })
+                        {
+                            <button class="@(_edit.Tier == tier ? "on" : "")" @onclick="@(() => _edit.Tier = tier)">@label</button>
+                        }
+                    </div>
+                </div>
+                <div class="field full"><label>Wikipedia title</label><input class="input" @bind="_edit.WikiTitle" placeholder="Only when it differs from the name, e.g. Parasite (2019 film)" /></div>
+                <div class="field"><label>TMDB id</label><input class="input mono" @bind="_edit.TmdbId" /></div>
+                <div class="field"><label>Wikidata id</label><input class="input mono" @bind="_edit.WikidataId" placeholder="Q…" /></div>
+                <div class="field full"><label>MusicBrainz id</label><input class="input mono" @bind="_edit.MusicBrainzId" /></div>
+            </div>
+
+            <div>
+                <div class="row" style="margin-bottom:10px">
+                    <h3>Media</h3>
+                    <button class="btn sm" style="margin-left:auto" disabled="@_ingesting" @onclick="Rematch">
+                        <Icon Name="refresh" Size="14" Class="@(_ingesting ? "spin" : null)" /> Re-match
+                    </button>
+                </div>
+                @if (_assets.Count == 0)
+                {
+                    <div class="card empty" style="padding:24px">
+                        <div class="icon-ring"><Icon Name="image" Size="20" /></div>
+                        No media yet. The app shows a gradient text card until one is matched.
+                    </div>
+                }
+                <div class="stack" style="gap:10px">
+                    @foreach (var a in _assets)
+                    {
+                        <div class="card" style="display:flex;gap:12px;padding:12px;box-shadow:none;@(a.IsEnabled ? "" : "opacity:.6")">
+                            @if (a.Type == AssetType.Image)
+                            {
+                                <div class="thumb lg"><img src="@a.Url" alt="" referrerpolicy="no-referrer" /></div>
+                            }
+                            else
+                            {
+                                <div class="thumb lg" style="background:var(--brand-gradient)"><Icon Name="music" Size="22" /></div>
+                            }
+                            <div style="min-width:0;flex:1" class="small">
+                                <div style="font-weight:600">@a.Provider · @a.Type</div>
+                                <div class="muted">@a.Licence</div>
+                                <div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@a.Attribution</div>
+                                @if (a.SourceUrl is not null)
+                                {
+                                    <a href="@a.SourceUrl" target="_blank" rel="noreferrer" style="color:var(--brand);font-weight:600;display:inline-flex;gap:4px;align-items:center">Source <Icon Name="external" Size="12" /></a>
+                                }
+                            </div>
+                            <label class="switch" title="Kill switch"><input type="checkbox" checked="@a.IsEnabled" @onchange="@(() => ToggleAsset(a))" /><span></span></label>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="drawer-foot">
+            <button class="btn" @onclick="@(() => _open = null)">Cancel</button>
+            <button class="btn primary" @onclick="SaveItem"><Icon Name="check" Size="16" /> Save item</button>
+        </div>
+    </div>
+}
+
+@if (_bulkOpen && _topic is not null)
+{
+    <div class="scrim" @onclick="@(() => _bulkOpen = false)"></div>
+    <div class="drawer" role="dialog" aria-label="Add items">
+        <div class="drawer-head">
+            <div class="thumb lg" style="background:@Palette.Cover(_topic.Accent);font-size:24px">@_topic.Emoji</div>
+            <div><h2>Add items to @_topic.Name</h2><div class="small muted">One per line: <span class="mono">Name|Detail|Tier|Wikipedia title</span></div></div>
+            <button class="btn icon-only ghost" style="margin-left:auto" @onclick="@(() => _bulkOpen = false)"><Icon Name="x" /></button>
+        </div>
+        <div class="drawer-body">
+            <textarea class="textarea mono" style="min-height:280px" @bind="_bulk" @bind:event="oninput" placeholder="Oppenheimer|2023|1&#10;Past Lives|2023|3"></textarea>
+            <div class="small muted">@BulkLines.Count item(s) ready. Duplicates of existing names are skipped. Tier defaults to 1.</div>
+        </div>
+        <div class="drawer-foot">
+            <button class="btn" @onclick="@(() => _bulkOpen = false)">Cancel</button>
+            <button class="btn primary" disabled="@(BulkLines.Count == 0)" @onclick="AddBulk"><Icon Name="plus" Size="16" /> Add @BulkLines.Count</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+
+    private sealed record Row(Item Item, string? Image, string? Provider, bool HasAudio, int DisabledAssets, int? Rank, double Rating, int Wins, int Losses);
+
+    private Topic? _topic;
+    private List<Row> _items = [];
+    private int _sessions;
+    private string _filter = "";
+    private int _tier;
+    private bool _missingOnly;
+    private bool _ingesting;
+    private Row? _open;
+    private Item _edit = new() { Name = "" };
+    private List<Asset> _assets = [];
+    private bool _bulkOpen;
+    private string _bulk = "";
+
+    private IEnumerable<Row> Visible => _items
+        .Where(r => _tier == 0 || r.Item.Tier == _tier)
+        .Where(r => !_missingOnly || r.Image is null)
+        .Where(r => _filter.Length == 0 || r.Item.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase) || r.Item.Detail.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+
+    private List<string[]> BulkLines => _bulk.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0)
+        .Select(l => l.Split('|').Select(p => p.Trim()).ToArray()).Where(p => p[0].Length > 0).ToList();
+
+    protected override Task OnParametersSetAsync() => Load();
+
+    private async Task Load()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _topic = await db.Topics.AsNoTracking().FirstOrDefaultAsync(t => t.Slug == Slug);
+        if (_topic is null) return;
+        var items = await db.Items.AsNoTracking().Include(i => i.Assets).Where(i => i.TopicId == _topic.Id)
+            .OrderBy(i => i.Tier).ThenBy(i => i.Name).ToListAsync();
+        var global = await db.GlobalRankings.AsNoTracking().Where(g => g.TopicId == _topic.Id).ToDictionaryAsync(g => g.ItemId);
+        _sessions = await db.Sessions.CountAsync(s => s.TopicId == _topic.Id);
+        _items = items.Select(i =>
+        {
+            var img = i.Assets.FirstOrDefault(a => a.IsEnabled && a.Type == AssetType.Image);
+            global.TryGetValue(i.Id, out var g);
+            return new Row(i, img?.Url, img?.Provider, i.Assets.Any(a => a.IsEnabled && a.Type == AssetType.Audio),
+                i.Assets.Count(a => !a.IsEnabled), g?.Rank, g?.Rating ?? 0, g?.Wins ?? 0, g?.Losses ?? 0);
+        }).ToList();
+    }
+
+    private async Task Open(Row row)
+    {
+        _open = row;
+        var i = row.Item;
+        _edit = new Item
+        {
+            Id = i.Id, TopicId = i.TopicId, Name = i.Name, Detail = i.Detail, Tier = i.Tier, WikiTitle = i.WikiTitle,
+            TmdbId = i.TmdbId, WikidataId = i.WikidataId, MusicBrainzId = i.MusicBrainzId, IsActive = i.IsActive,
+        };
+        await LoadAssets();
+    }
+
+    private async Task LoadAssets()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _assets = await db.Assets.AsNoTracking().Where(a => a.ItemId == _edit.Id).OrderBy(a => a.Type).ToListAsync();
+    }
+
+    private async Task SaveItem()
+    {
+        if (string.IsNullOrWhiteSpace(_edit.Name)) { Toast.Show("An item needs a name", error: true); return; }
+        await using var db = await Factory.CreateDbContextAsync();
+        var item = await db.Items.FirstAsync(i => i.Id == _edit.Id);
+        var changes = new List<string>();
+        if (item.Name != _edit.Name.Trim()) changes.Add($"name “{item.Name}” → “{_edit.Name.Trim()}”");
+        if (item.Tier != _edit.Tier) changes.Add($"tier {item.Tier} → {_edit.Tier}");
+        if (item.WikiTitle != Blank(_edit.WikiTitle)) changes.Add("wiki title");
+        item.Name = _edit.Name.Trim();
+        item.Detail = _edit.Detail?.Trim() ?? "";
+        item.Tier = _edit.Tier;
+        item.WikiTitle = Blank(_edit.WikiTitle);
+        item.TmdbId = Blank(_edit.TmdbId);
+        item.WikidataId = Blank(_edit.WikidataId);
+        item.MusicBrainzId = Blank(_edit.MusicBrainzId);
+        item.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await Audit("item.update", item.Name, changes.Count == 0 ? "Details updated" : string.Join(", ", changes));
+        Toast.Show($"Saved {item.Name}");
+        _open = null;
+        await Load();
+    }
+
+    private async Task CycleTier(Item i)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var item = await db.Items.FirstAsync(x => x.Id == i.Id);
+        var before = item.Tier;
+        item.Tier = item.Tier % 3 + 1;
+        item.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await Audit("item.tier", item.Name, $"Tier {before} → {item.Tier}");
+        await Load();
+    }
+
+    private async Task ToggleItem(Item i)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var item = await db.Items.FirstAsync(x => x.Id == i.Id);
+        item.IsActive = !item.IsActive;
+        item.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await Audit(item.IsActive ? "item.show" : "item.hide", item.Name);
+        Toast.Show(item.IsActive ? $"{item.Name} is back in play" : $"{item.Name} is out of play");
+        await Load();
+    }
+
+    private async Task ToggleAsset(Asset a)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var asset = await db.Assets.Include(x => x.Item).FirstAsync(x => x.Id == a.Id);
+        asset.IsEnabled = !asset.IsEnabled;
+        asset.DisabledReason = asset.IsEnabled ? null : "Disabled from the item editor";
+        asset.Item!.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        await Audit(asset.IsEnabled ? "asset.enable" : "asset.disable", asset.Item.Name, $"{asset.Provider} {asset.Type}");
+        Toast.Show(asset.IsEnabled ? "Asset re-enabled" : "Asset disabled. The app drops it on its next refresh.");
+        await LoadAssets();
+        await Load();
+    }
+
+    private async Task Rematch()
+    {
+        _ingesting = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var r = await scope.ServiceProvider.GetRequiredService<MediaIngestionService>().IngestItemAsync(_edit.Id);
+            Toast.Show(r.Errors.Count > 0 ? $"Provider unreachable: {r.Errors[0]}" : $"{r.AssetsAdded} added, {r.AssetsUpdated} updated", r.Errors.Count > 0);
+            await LoadAssets();
+            await Load();
+        }
+        finally { _ingesting = false; }
+    }
+
+    private async Task FetchMissing()
+    {
+        if (_topic is null) return;
+        _ingesting = true;
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var r = await scope.ServiceProvider.GetRequiredService<MediaIngestionService>().IngestTopicAsync(_topic.Id, onlyMissing: true);
+            Toast.Show(r.Errors.Count > 0 && r.AssetsAdded == 0
+                ? $"Could not reach the provider ({r.Errors.Count} errors)"
+                : $"Checked {r.ItemsChecked} items: {r.AssetsAdded} added, {r.AssetsUpdated} updated", r.Errors.Count > 0 && r.AssetsAdded == 0);
+            await Load();
+        }
+        finally { _ingesting = false; }
+    }
+
+    private async Task AddBulk()
+    {
+        if (_topic is null) return;
+        await using var db = await Factory.CreateDbContextAsync();
+        var existing = (await db.Items.Where(i => i.TopicId == _topic.Id).Select(i => i.Name).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        int added = 0;
+        foreach (var p in BulkLines)
+        {
+            if (!existing.Add(p[0])) continue;
+            db.Items.Add(new Item
+            {
+                TopicId = _topic.Id, Name = p[0], Detail = p.ElementAtOrDefault(1) ?? "",
+                Tier = int.TryParse(p.ElementAtOrDefault(2), out var t) && t is >= 1 and <= 3 ? t : 1,
+                WikiTitle = Blank(p.ElementAtOrDefault(3)), UpdatedAt = Clock.GetUtcNow(),
+            });
+            added++;
+        }
+        await db.SaveChangesAsync();
+        await Audit("item.import", _topic.Name, $"{added} items added");
+        Toast.Show($"Added {added} item(s) to {_topic.Name}");
+        _bulk = "";
+        _bulkOpen = false;
+        await Load();
+    }
+
+    private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    private async Task Audit(string action, string subject, string details = "")
+    {
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync(action, subject, details);
+    }
+}

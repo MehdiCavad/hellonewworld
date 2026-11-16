@@ -1,5 +1,13 @@
 # Rankd — rank anything, two at a time
 
+> **Rankd v2** lives in this repo alongside the original web prototype:
+>
+> - [`server/`](server/README.md): .NET 10 Web API on SQL Server, plus the Blazor admin panel
+> - [`mobile/`](mobile/README.md): the Flutter app for iOS, Android and web
+> - [`docs/rankd-concept-and-scope.md`](docs/rankd-concept-and-scope.md): concept and scope
+>
+> The rest of this page describes the prototype (`index.html`), which v2's ranking engine is ported from.
+
 A ranking app built on pairwise comparison. You pick a topic, pick a level, and
 then answer one question over and over: **this one or that one?** After a few
 dozen taps you get a full ranked list of the topic.

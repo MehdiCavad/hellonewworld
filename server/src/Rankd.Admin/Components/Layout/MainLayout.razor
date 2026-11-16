@@ -1,0 +1,126 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject IJSRuntime JS
+@inject Toasts ToastQueue
+@inject NavigationManager Nav
+@inject IWebHostEnvironment Env
+@inject DatabaseOptions DbOptions
+
+<div class="shell">
+    <aside class="sidebar">
+        <a class="brand" href="">
+            <span class="brand-mark"><Icon Name="logo" Size="18" Stroke="2.6" /></span>
+            <span>
+                <div class="brand-name">Rankd</div>
+                <div class="brand-tag">Control room</div>
+            </span>
+        </a>
+
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /> Overview</NavLink>
+
+        <div class="nav-label">Catalogue</div>
+        <NavLink class="nav-link" href="topics"><Icon Name="grid" /> Topics</NavLink>
+        <NavLink class="nav-link" href="media"><Icon Name="image" /> Media &amp; licences</NavLink>
+        <NavLink class="nav-link" href="levels"><Icon Name="sliders" /> Levels</NavLink>
+
+        <div class="nav-label">Players</div>
+        <NavLink class="nav-link" href="rankings"><Icon Name="trophy" /> Community rankings</NavLink>
+        <NavLink class="nav-link" href="sessions"><Icon Name="swords" /> Sessions</NavLink>
+        <NavLink class="nav-link" href="devices"><Icon Name="smartphone" /> Devices</NavLink>
+
+        <div class="nav-label">System</div>
+        <NavLink class="nav-link" href="activity"><Icon Name="activity" /> Activity log</NavLink>
+        <NavLink class="nav-link" href="system"><Icon Name="settings" /> System</NavLink>
+
+        <div class="sidebar-foot">
+            <div class="env-card">
+                <span class="dot @(Env.IsDevelopment() ? "warn" : "")"></span>
+                <div>
+                    <div style="font-weight:600;color:var(--text)">@Env.EnvironmentName</div>
+                    <div class="muted">@(DbOptions.Provider == "Sqlite" ? "SQLite dev database" : "SQL Server")</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs"><Icon Name="logo" Size="15" /> Rankd <Icon Name="chevron-right" Size="14" /> <b>@Section</b></div>
+            <div class="spacer"></div>
+            <form class="search" @onsubmit="Search" @onsubmit:preventDefault>
+                <Icon Name="search" Size="16" />
+                <input placeholder="Search items, topics…" @bind="_query" />
+                <span class="kbd">↵</span>
+            </form>
+            <button class="btn icon-only ghost" title="Toggle theme" @onclick="ToggleTheme">
+                <Icon Name="@(_dark ? "sun" : "moon")" />
+            </button>
+        </header>
+        <main class="content">
+            @Body
+        </main>
+    </div>
+</div>
+
+<div class="toasts" aria-live="polite">
+    @foreach (var t in ToastQueue.Items)
+    {
+        <div class="toast @(t.IsError ? "error" : "")" @key="t.Id">
+            <Icon Name="@(t.IsError ? "alert" : "check-circle")" /> @t.Message
+        </div>
+    }
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Something went wrong. <a href="." class="reload">Reload</a>
+    <span class="dismiss">✕</span>
+</div>
+
+@code {
+    private bool _dark;
+    private string _query = "";
+
+    private string Section => Nav.ToBaseRelativePath(Nav.Uri).Split('/', '?')[0] switch
+    {
+        "" => "Overview",
+        "topics" => "Topics",
+        "media" => "Media & licences",
+        "levels" => "Levels",
+        "rankings" => "Community rankings",
+        "sessions" => "Sessions",
+        "devices" => "Devices",
+        "activity" => "Activity log",
+        "system" => "System",
+        "search" => "Search",
+        var other => other,
+    };
+
+    protected override void OnInitialized()
+    {
+        ToastQueue.Changed += OnToasts;
+        Nav.LocationChanged += OnLocation;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _dark = await JS.InvokeAsync<string>("rankdTheme.current") == "dark";
+        StateHasChanged();
+    }
+
+    private async Task ToggleTheme() => _dark = await JS.InvokeAsync<string>("rankdTheme.toggle") == "dark";
+
+    private void Search()
+    {
+        if (!string.IsNullOrWhiteSpace(_query)) Nav.NavigateTo($"search?q={Uri.EscapeDataString(_query.Trim())}");
+    }
+
+    private void OnToasts() => InvokeAsync(StateHasChanged);
+    private void OnLocation(object? s, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ToastQueue.Changed -= OnToasts;
+        Nav.LocationChanged -= OnLocation;
+    }
+}

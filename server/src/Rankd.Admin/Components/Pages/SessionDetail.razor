@@ -1,0 +1,85 @@
+@page "/sessions/{Id:guid}"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject TimeProvider Clock
+
+<PageTitle>Session · Rankd Admin</PageTitle>
+
+@if (_s is null)
+{
+    <div class="card skeleton" style="height:160px"></div>
+}
+else
+{
+    <div class="page-head">
+        <div>
+            <a href="sessions" class="eyebrow"><Icon Name="chevron-left" Size="14" /> All sessions</a>
+            <h1>@_s.Topic!.Emoji @_s.Topic.Name · @_level</h1>
+            <p>@(_s.Mode == "smart" ? "Smart duels" : "King of the hill") · started @_s.CreatedAt.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture) · device <span class="mono">@_s.DeviceId</span></p>
+        </div>
+        <div class="actions"><StatusChip Status="@_s.Status" /></div>
+    </div>
+
+    <div class="grid grid-main">
+        <div class="card">
+            <div class="card-head"><h2>Personal ranking</h2><div class="sub">Re-derived from the history on every upload</div></div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th style="width:56px">#</th><th>Item</th><th class="right">Rating</th><th class="right">W–L–T</th><th>Confidence</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in _rank)
+                        {
+                            <tr>
+                                <td><div class="rank @(r.Rank switch { 1 => "gold", 2 => "silver", 3 => "bronze", _ => "" })">@r.Rank</div></td>
+                                <td><div class="cell-main"><Thumb Name="@Name(r.ItemId)" Accent="@_s.Topic.Accent" /><b>@Name(r.ItemId)</b></div></td>
+                                <td class="right num">@Math.Round(r.Rating)</td>
+                                <td class="right num small"><span style="color:var(--good)">@r.Wins</span>–<span style="color:var(--bad)">@r.Losses</span>–<span class="muted">@r.Ties</span></td>
+                                <td style="width:140px">
+                                    @if (r.Confidence < 0.5) { <span class="chip warn">Low data</span> }
+                                    else { <div class="progress"><span style="width:@((r.Confidence * 100).ToString("0", CultureInfo.InvariantCulture))%"></span></div> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-head"><h2>Answer history</h2><div class="sub">@_s.Comparisons.Count of @_s.TargetRounds rounds</div></div>
+            <div class="feed" style="max-height:720px;overflow:auto">
+                @foreach (var c in _s.Comparisons.OrderByDescending(c => c.ClientSequence))
+                {
+                    <div class="feed-item small">
+                        <span class="muted num" style="width:28px">@(c.ClientSequence + 1)</span>
+                        <div style="flex:1;min-width:0">
+                            <span style="@(c.Outcome == ComparisonOutcome.A ? "font-weight:700;color:var(--good)" : "")">@Name(c.ItemAId)</span>
+                            <span class="muted"> vs </span>
+                            <span style="@(c.Outcome == ComparisonOutcome.B ? "font-weight:700;color:var(--good)" : "")">@Name(c.ItemBId)</span>
+                            @if (c.Outcome == ComparisonOutcome.Tie) { <span class="chip" style="margin-left:6px;height:20px">tie</span> }
+                        </div>
+                        <span class="muted">@c.CreatedAt.ToString("HH:mm:ss", CultureInfo.InvariantCulture)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private RankingSessionRecord? _s;
+    private List<PersonalRanking> _rank = [];
+    private Dictionary<int, string> _names = [];
+    private string _level = "";
+
+    private string Name(int id) => _names.GetValueOrDefault(id, $"#{id}");
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _s = await db.Sessions.AsNoTracking().Include(s => s.Topic).Include(s => s.Comparisons).FirstOrDefaultAsync(s => s.Id == Id);
+        if (_s is null) return;
+        _rank = await db.PersonalRankings.AsNoTracking().Where(p => p.SessionId == Id).OrderBy(p => p.Rank).ToListAsync();
+        _names = await db.Items.AsNoTracking().Where(i => i.TopicId == _s.TopicId).ToDictionaryAsync(i => i.Id, i => i.Name);
+        _level = await db.Levels.Where(l => l.Id == _s.LevelId).Select(l => l.Name).FirstOrDefaultAsync() ?? _s.LevelId;
+    }
+}

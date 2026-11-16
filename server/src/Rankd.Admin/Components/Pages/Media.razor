@@ -1,0 +1,131 @@
+@page "/media"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+@inject TimeProvider Clock
+
+<PageTitle>Media &amp; licences · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="shield" Size="14" /> Licence registry</div>
+        <h1>Media &amp; licences</h1>
+        <p>Every poster, photo and preview with its provider, licence and attribution. We hotlink and store no files. Switching an asset off removes it from the app on its next refresh, with no release needed.</p>
+    </div>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:16px">
+    <StatCard Label="Enabled assets" Icon="image" Value="@_all.Count(a => a.IsEnabled)" Foot="@($"{_all.Count(a => !a.IsEnabled)} switched off")" />
+    <StatCard Label="Items with an image" Icon="check-circle" Text="@($"{_coverage}/{_items}")" Foot="Goal: 90% for posters and photos" Color="#14b8a6" />
+    <StatCard Label="Audio previews" Icon="music" Value="@_all.Count(a => a.Type == AssetType.Audio && a.IsEnabled)" Foot="30-second store previews" Color="#ff5d7a" />
+    <StatCard Label="Missing licence text" Icon="alert" Value="@_all.Count(a => string.IsNullOrWhiteSpace(a.Licence))" Foot="Target: none" Color="#f59e0b" />
+</div>
+
+<div class="card">
+    <div class="toolbar">
+        <div class="search"><Icon Name="search" Size="16" /><input placeholder="Item, licence or author" @bind="_q" @bind:event="oninput" /></div>
+        <div class="segmented">
+            @foreach (var f in new[] { "All", "Enabled", "Disabled", "Audio" })
+            {
+                <button class="@(_show == f ? "on" : "")" @onclick="@(() => _show = f)">@f</button>
+            }
+        </div>
+        <select class="select" style="width:auto" @bind="_provider">
+            <option value="">All providers</option>
+            @foreach (var p in _all.Select(a => a.Provider).Distinct().Order()) { <option value="@p">@p</option> }
+        </select>
+    </div>
+
+    @if (_all.Count == 0)
+    {
+        <div class="empty">
+            <div class="icon-ring"><Icon Name="image" Size="22" /></div>
+            <h2 style="color:var(--text)">No media yet</h2>
+            <div style="max-width:520px">Media references are pulled from Wikimedia Commons and the iTunes Search API. Open a topic and press <b>Fetch missing media</b>, or start with every topic below. Until then the app shows gradient text cards.</div>
+            <button class="btn primary" disabled="@_busy" @onclick="FetchAll"><Icon Name="@(_busy ? "refresh" : "download")" Size="16" Class="@(_busy ? "spin" : null)" /> Fetch media for all topics</button>
+        </div>
+    }
+    else
+    {
+        <div class="media-grid">
+            @foreach (var a in Visible.Take(240))
+            {
+                <div class="media-card @(a.IsEnabled ? "" : "off")" @key="a.Id">
+                    @if (a.Type == AssetType.Image)
+                    {
+                        <div class="thumb xl" style="border-radius:0"><img src="@a.Url" alt="" loading="lazy" referrerpolicy="no-referrer" /></div>
+                    }
+                    else
+                    {
+                        <div class="thumb xl" style="border-radius:0;background:var(--brand-gradient)"><Icon Name="music" Size="40" /></div>
+                    }
+                    <div class="meta">
+                        <div class="row" style="justify-content:space-between">
+                            <b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@a.Item!.Name</b>
+                            <label class="switch"><input type="checkbox" checked="@a.IsEnabled" @onchange="@(() => Toggle(a))" /><span></span></label>
+                        </div>
+                        <span class="muted">@a.Provider · @a.Licence</span>
+                        <span class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="@a.Attribution">@a.Attribution</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Asset> _all = [];
+    private int _items, _coverage;
+    private string _q = "", _show = "All", _provider = "";
+    private bool _busy;
+
+    private IEnumerable<Asset> Visible => _all
+        .Where(a => _show switch { "Enabled" => a.IsEnabled, "Disabled" => !a.IsEnabled, "Audio" => a.Type == AssetType.Audio, _ => true })
+        .Where(a => _provider.Length == 0 || a.Provider == _provider)
+        .Where(a => _q.Length == 0 || $"{a.Item!.Name} {a.Licence} {a.Attribution}".Contains(_q, StringComparison.OrdinalIgnoreCase));
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _all = await db.Assets.AsNoTracking().Include(a => a.Item).OrderBy(a => a.Item!.Name).ToListAsync();
+        _items = await db.Items.CountAsync(i => i.IsActive);
+        _coverage = await db.Items.CountAsync(i => i.IsActive && i.Assets.Any(a => a.IsEnabled && a.Type == AssetType.Image));
+    }
+
+    private async Task Toggle(Asset a)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var asset = await db.Assets.Include(x => x.Item).FirstAsync(x => x.Id == a.Id);
+        asset.IsEnabled = !asset.IsEnabled;
+        asset.DisabledReason = asset.IsEnabled ? null : "Disabled from the licence registry";
+        asset.Item!.UpdatedAt = Clock.GetUtcNow();
+        await db.SaveChangesAsync();
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync(asset.IsEnabled ? "asset.enable" : "asset.disable", asset.Item.Name, $"{asset.Provider} · {asset.Licence}");
+        Toast.Show(asset.IsEnabled ? $"Re-enabled {asset.Item.Name}" : $"Switched off {asset.Item.Name}");
+        await Load();
+    }
+
+    private async Task FetchAll()
+    {
+        _busy = true;
+        try
+        {
+            await using var db = await Factory.CreateDbContextAsync();
+            var topics = await db.Topics.Where(t => t.IsActive).Select(t => t.Id).ToListAsync();
+            int added = 0, errors = 0;
+            foreach (var id in topics)
+            {
+                using var scope = Scopes.CreateScope();
+                var r = await scope.ServiceProvider.GetRequiredService<MediaIngestionService>().IngestTopicAsync(id, onlyMissing: true);
+                added += r.AssetsAdded;
+                errors += r.Errors.Count;
+            }
+            Toast.Show(added == 0 && errors > 0 ? "The media providers could not be reached from this server" : $"{added} assets added", added == 0 && errors > 0);
+            await Load();
+        }
+        finally { _busy = false; }
+    }
+}

@@ -1,0 +1,1515 @@
+{
+ "levels": [
+  {
+   "id": "casual",
+   "name": "Casual",
+   "emoji": "🌱",
+   "tiers": [
+    1
+   ],
+   "poolSize": 8,
+   "roundBudget": 14,
+   "blurb": "Household names only. A few minutes."
+  },
+  {
+   "id": "standard",
+   "name": "Standard",
+   "emoji": "🔥",
+   "tiers": [
+    1,
+    2
+   ],
+   "poolSize": 16,
+   "roundBudget": 34,
+   "blurb": "The usual suspects plus some depth."
+  },
+  {
+   "id": "expert",
+   "name": "Expert",
+   "emoji": "🧠",
+   "tiers": [
+    1,
+    2,
+    3
+   ],
+   "poolSize": 24,
+   "roundBudget": 60,
+   "blurb": "Deeper cuts. You need to know your stuff."
+  },
+  {
+   "id": "marathon",
+   "name": "Marathon",
+   "emoji": "🏆",
+   "tiers": [
+    1,
+    2,
+    3
+   ],
+   "poolSize": 0,
+   "roundBudget": 0,
+   "blurb": "Everything in the topic. Take your time."
+  }
+ ],
+ "topics": [
+  {
+   "slug": "movies",
+   "name": "Movies",
+   "emoji": "🎬",
+   "blurb": "All-time cinema",
+   "mediaKind": "itunes:movie",
+   "items": [
+    {
+     "name": "The Godfather",
+     "detail": "1972",
+     "tier": 1
+    },
+    {
+     "name": "The Shawshank Redemption",
+     "detail": "1994",
+     "tier": 1
+    },
+    {
+     "name": "Pulp Fiction",
+     "detail": "1994",
+     "tier": 1
+    },
+    {
+     "name": "The Dark Knight",
+     "detail": "2008",
+     "tier": 1
+    },
+    {
+     "name": "Forrest Gump",
+     "detail": "1994",
+     "tier": 1
+    },
+    {
+     "name": "Inception",
+     "detail": "2010",
+     "tier": 1
+    },
+    {
+     "name": "Fight Club",
+     "detail": "1999",
+     "tier": 1
+    },
+    {
+     "name": "The Matrix",
+     "detail": "1999",
+     "tier": 1
+    },
+    {
+     "name": "Goodfellas",
+     "detail": "1990",
+     "tier": 1
+    },
+    {
+     "name": "Titanic",
+     "detail": "1997",
+     "tier": 1,
+     "wiki": "Titanic (1997 film)"
+    },
+    {
+     "name": "Interstellar",
+     "detail": "2014",
+     "tier": 1,
+     "wiki": "Interstellar (film)"
+    },
+    {
+     "name": "Gladiator",
+     "detail": "2000",
+     "tier": 1,
+     "wiki": "Gladiator (2000 film)"
+    },
+    {
+     "name": "Schindler's List",
+     "detail": "1993",
+     "tier": 2
+    },
+    {
+     "name": "Se7en",
+     "detail": "1995",
+     "tier": 2,
+     "wiki": "Seven (1995 film)"
+    },
+    {
+     "name": "The Silence of the Lambs",
+     "detail": "1991",
+     "tier": 2,
+     "wiki": "The Silence of the Lambs (film)"
+    },
+    {
+     "name": "Saving Private Ryan",
+     "detail": "1998",
+     "tier": 2
+    },
+    {
+     "name": "The Departed",
+     "detail": "2006",
+     "tier": 2,
+     "wiki": "The Departed"
+    },
+    {
+     "name": "Casablanca",
+     "detail": "1942",
+     "tier": 2,
+     "wiki": "Casablanca (film)"
+    },
+    {
+     "name": "Parasite",
+     "detail": "2019",
+     "tier": 2,
+     "wiki": "Parasite (2019 film)"
+    },
+    {
+     "name": "Whiplash",
+     "detail": "2014",
+     "tier": 2,
+     "wiki": "Whiplash (2014 film)"
+    },
+    {
+     "name": "The Prestige",
+     "detail": "2006",
+     "tier": 2,
+     "wiki": "The Prestige (film)"
+    },
+    {
+     "name": "No Country for Old Men",
+     "detail": "2007",
+     "tier": 2,
+     "wiki": "No Country for Old Men (film)"
+    },
+    {
+     "name": "Django Unchained",
+     "detail": "2012",
+     "tier": 2
+    },
+    {
+     "name": "Léon: The Professional",
+     "detail": "1994",
+     "tier": 2
+    },
+    {
+     "name": "Apocalypse Now",
+     "detail": "1979",
+     "tier": 3
+    },
+    {
+     "name": "Taxi Driver",
+     "detail": "1976",
+     "tier": 3
+    },
+    {
+     "name": "There Will Be Blood",
+     "detail": "2007",
+     "tier": 3
+    },
+    {
+     "name": "City of God",
+     "detail": "2002",
+     "tier": 3,
+     "wiki": "City of God (2002 film)"
+    },
+    {
+     "name": "Come and See",
+     "detail": "1985",
+     "tier": 3
+    },
+    {
+     "name": "Seven Samurai",
+     "detail": "1954",
+     "tier": 3
+    },
+    {
+     "name": "In the Mood for Love",
+     "detail": "2000",
+     "tier": 3
+    },
+    {
+     "name": "Stalker",
+     "detail": "1979",
+     "tier": 3,
+     "wiki": "Stalker (1979 film)"
+    },
+    {
+     "name": "Andrei Rublev",
+     "detail": "1966",
+     "tier": 3,
+     "wiki": "Andrei Rublev (film)"
+    },
+    {
+     "name": "Paris, Texas",
+     "detail": "1984",
+     "tier": 3,
+     "wiki": "Paris, Texas (film)"
+    },
+    {
+     "name": "The Hunt",
+     "detail": "2012",
+     "tier": 3,
+     "wiki": "The Hunt (2012 film)"
+    },
+    {
+     "name": "A Separation",
+     "detail": "2011",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "actors",
+   "name": "Actors",
+   "emoji": "🎭",
+   "blurb": "Screen legends",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "Anthony Hopkins",
+     "detail": "Wales",
+     "tier": 1
+    },
+    {
+     "name": "Al Pacino",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Robert De Niro",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Meryl Streep",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Leonardo DiCaprio",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Tom Hanks",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Denzel Washington",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Morgan Freeman",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Cate Blanchett",
+     "detail": "Australia",
+     "tier": 1
+    },
+    {
+     "name": "Daniel Day-Lewis",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Joaquin Phoenix",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Christian Bale",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Gary Oldman",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Viola Davis",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Frances McDormand",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Philip Seymour Hoffman",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Tilda Swinton",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Javier Bardem",
+     "detail": "Spain",
+     "tier": 2
+    },
+    {
+     "name": "Marion Cotillard",
+     "detail": "France",
+     "tier": 2
+    },
+    {
+     "name": "Mahershala Ali",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Oscar Isaac",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Toni Collette",
+     "detail": "Australia",
+     "tier": 2
+    },
+    {
+     "name": "Ralph Fiennes",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Michael Fassbender",
+     "detail": "Ireland",
+     "tier": 2
+    },
+    {
+     "name": "Isabelle Huppert",
+     "detail": "France",
+     "tier": 3
+    },
+    {
+     "name": "Toshiro Mifune",
+     "detail": "Japan",
+     "tier": 3
+    },
+    {
+     "name": "Setsuko Hara",
+     "detail": "Japan",
+     "tier": 3
+    },
+    {
+     "name": "Klaus Kinski",
+     "detail": "Germany",
+     "tier": 3
+    },
+    {
+     "name": "Song Kang-ho",
+     "detail": "South Korea",
+     "tier": 3
+    },
+    {
+     "name": "Mads Mikkelsen",
+     "detail": "Denmark",
+     "tier": 3
+    },
+    {
+     "name": "Vincent Cassel",
+     "detail": "France",
+     "tier": 3
+    },
+    {
+     "name": "Gian Maria Volontè",
+     "detail": "Italy",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "footballers",
+   "name": "Footballers",
+   "emoji": "⚽",
+   "blurb": "The greatest of all time",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "Lionel Messi",
+     "detail": "Argentina",
+     "tier": 1
+    },
+    {
+     "name": "Cristiano Ronaldo",
+     "detail": "Portugal",
+     "tier": 1
+    },
+    {
+     "name": "Diego Maradona",
+     "detail": "Argentina",
+     "tier": 1
+    },
+    {
+     "name": "Pelé",
+     "detail": "Brazil",
+     "tier": 1
+    },
+    {
+     "name": "Ronaldinho",
+     "detail": "Brazil",
+     "tier": 1
+    },
+    {
+     "name": "Zinedine Zidane",
+     "detail": "France",
+     "tier": 1
+    },
+    {
+     "name": "Ronaldo Nazário",
+     "detail": "Brazil",
+     "tier": 1,
+     "wiki": "Ronaldo (Brazilian footballer)"
+    },
+    {
+     "name": "Johan Cruyff",
+     "detail": "Netherlands",
+     "tier": 1
+    },
+    {
+     "name": "Kylian Mbappé",
+     "detail": "France",
+     "tier": 1
+    },
+    {
+     "name": "Andrés Iniesta",
+     "detail": "Spain",
+     "tier": 2
+    },
+    {
+     "name": "Xavi Hernández",
+     "detail": "Spain",
+     "tier": 2,
+     "wiki": "Xavi"
+    },
+    {
+     "name": "Franz Beckenbauer",
+     "detail": "Germany",
+     "tier": 2
+    },
+    {
+     "name": "Paolo Maldini",
+     "detail": "Italy",
+     "tier": 2
+    },
+    {
+     "name": "Thierry Henry",
+     "detail": "France",
+     "tier": 2
+    },
+    {
+     "name": "Roberto Baggio",
+     "detail": "Italy",
+     "tier": 2
+    },
+    {
+     "name": "Michel Platini",
+     "detail": "France",
+     "tier": 2
+    },
+    {
+     "name": "Erling Haaland",
+     "detail": "Norway",
+     "tier": 2
+    },
+    {
+     "name": "Luka Modrić",
+     "detail": "Croatia",
+     "tier": 2
+    },
+    {
+     "name": "Gerd Müller",
+     "detail": "Germany",
+     "tier": 2
+    },
+    {
+     "name": "Alfredo Di Stéfano",
+     "detail": "Argentina",
+     "tier": 2
+    },
+    {
+     "name": "Garrincha",
+     "detail": "Brazil",
+     "tier": 3
+    },
+    {
+     "name": "Ferenc Puskás",
+     "detail": "Hungary",
+     "tier": 3
+    },
+    {
+     "name": "Lev Yashin",
+     "detail": "USSR",
+     "tier": 3
+    },
+    {
+     "name": "Bobby Charlton",
+     "detail": "England",
+     "tier": 3
+    },
+    {
+     "name": "Romário",
+     "detail": "Brazil",
+     "tier": 3
+    },
+    {
+     "name": "George Best",
+     "detail": "N. Ireland",
+     "tier": 3
+    },
+    {
+     "name": "Socrates",
+     "detail": "Brazil",
+     "tier": 3,
+     "wiki": "Sócrates (footballer)"
+    },
+    {
+     "name": "Marco van Basten",
+     "detail": "Netherlands",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "music",
+   "name": "Music Artists",
+   "emoji": "🎸",
+   "blurb": "Bands and solo acts",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "The Beatles",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Queen",
+     "detail": "UK",
+     "tier": 1,
+     "wiki": "Queen (band)"
+    },
+    {
+     "name": "Pink Floyd",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Michael Jackson",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Led Zeppelin",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Bob Dylan",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Nirvana",
+     "detail": "USA",
+     "tier": 1,
+     "wiki": "Nirvana (band)"
+    },
+    {
+     "name": "Radiohead",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "The Rolling Stones",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Beyoncé",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "David Bowie",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Prince",
+     "detail": "USA",
+     "tier": 2,
+     "wiki": "Prince (musician)"
+    },
+    {
+     "name": "Metallica",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Daft Punk",
+     "detail": "France",
+     "tier": 2
+    },
+    {
+     "name": "Kendrick Lamar",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Amy Winehouse",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Johnny Cash",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Stevie Wonder",
+     "detail": "USA",
+     "tier": 2
+    },
+    {
+     "name": "Massive Attack",
+     "detail": "UK",
+     "tier": 2
+    },
+    {
+     "name": "Fleetwood Mac",
+     "detail": "UK/USA",
+     "tier": 2
+    },
+    {
+     "name": "Talking Heads",
+     "detail": "USA",
+     "tier": 3
+    },
+    {
+     "name": "Portishead",
+     "detail": "UK",
+     "tier": 3,
+     "wiki": "Portishead (band)"
+    },
+    {
+     "name": "Joy Division",
+     "detail": "UK",
+     "tier": 3
+    },
+    {
+     "name": "Nina Simone",
+     "detail": "USA",
+     "tier": 3
+    },
+    {
+     "name": "Aphex Twin",
+     "detail": "UK",
+     "tier": 3
+    },
+    {
+     "name": "Sigur Rós",
+     "detail": "Iceland",
+     "tier": 3
+    },
+    {
+     "name": "Fela Kuti",
+     "detail": "Nigeria",
+     "tier": 3
+    },
+    {
+     "name": "Tom Waits",
+     "detail": "USA",
+     "tier": 3
+    },
+    {
+     "name": "Cocteau Twins",
+     "detail": "UK",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "songs",
+   "name": "Songs",
+   "emoji": "🎵",
+   "blurb": "Play the hook, then pick",
+   "mediaKind": "itunes:song",
+   "items": [
+    {
+     "name": "Bohemian Rhapsody",
+     "detail": "Queen",
+     "tier": 1
+    },
+    {
+     "name": "Billie Jean",
+     "detail": "Michael Jackson",
+     "tier": 1
+    },
+    {
+     "name": "Smells Like Teen Spirit",
+     "detail": "Nirvana",
+     "tier": 1
+    },
+    {
+     "name": "Rolling in the Deep",
+     "detail": "Adele",
+     "tier": 1
+    },
+    {
+     "name": "Shape of You",
+     "detail": "Ed Sheeran",
+     "tier": 1
+    },
+    {
+     "name": "Blinding Lights",
+     "detail": "The Weeknd",
+     "tier": 1
+    },
+    {
+     "name": "Hey Jude",
+     "detail": "The Beatles",
+     "tier": 1
+    },
+    {
+     "name": "Hotel California",
+     "detail": "Eagles",
+     "tier": 1
+    },
+    {
+     "name": "Lose Yourself",
+     "detail": "Eminem",
+     "tier": 1
+    },
+    {
+     "name": "Sweet Child O' Mine",
+     "detail": "Guns N' Roses",
+     "tier": 1
+    },
+    {
+     "name": "Wonderwall",
+     "detail": "Oasis",
+     "tier": 2
+    },
+    {
+     "name": "Halo",
+     "detail": "Beyoncé",
+     "tier": 2
+    },
+    {
+     "name": "Seven Nation Army",
+     "detail": "The White Stripes",
+     "tier": 2
+    },
+    {
+     "name": "Rehab",
+     "detail": "Amy Winehouse",
+     "tier": 2
+    },
+    {
+     "name": "Get Lucky",
+     "detail": "Daft Punk",
+     "tier": 2
+    },
+    {
+     "name": "Purple Rain",
+     "detail": "Prince",
+     "tier": 2
+    },
+    {
+     "name": "Like a Rolling Stone",
+     "detail": "Bob Dylan",
+     "tier": 2
+    },
+    {
+     "name": "Karma Police",
+     "detail": "Radiohead",
+     "tier": 2
+    },
+    {
+     "name": "Superstition",
+     "detail": "Stevie Wonder",
+     "tier": 2
+    },
+    {
+     "name": "Ring of Fire",
+     "detail": "Johnny Cash",
+     "tier": 2
+    },
+    {
+     "name": "Teardrop",
+     "detail": "Massive Attack",
+     "tier": 3
+    },
+    {
+     "name": "Glory Box",
+     "detail": "Portishead",
+     "tier": 3
+    },
+    {
+     "name": "Love Will Tear Us Apart",
+     "detail": "Joy Division",
+     "tier": 3
+    },
+    {
+     "name": "Feeling Good",
+     "detail": "Nina Simone",
+     "tier": 3
+    },
+    {
+     "name": "Windowlicker",
+     "detail": "Aphex Twin",
+     "tier": 3
+    },
+    {
+     "name": "Hoppípolla",
+     "detail": "Sigur Rós",
+     "tier": 3
+    },
+    {
+     "name": "Zombie",
+     "detail": "Fela Kuti",
+     "tier": 3
+    },
+    {
+     "name": "Downtown Train",
+     "detail": "Tom Waits",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "food",
+   "name": "Food",
+   "emoji": "🍽️",
+   "blurb": "Dishes worth arguing about",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "Pizza",
+     "detail": "Italy",
+     "tier": 1
+    },
+    {
+     "name": "Sushi",
+     "detail": "Japan",
+     "tier": 1
+    },
+    {
+     "name": "Burger",
+     "detail": "USA",
+     "tier": 1,
+     "wiki": "Hamburger"
+    },
+    {
+     "name": "Pasta Carbonara",
+     "detail": "Italy",
+     "tier": 1,
+     "wiki": "Carbonara"
+    },
+    {
+     "name": "Kebab",
+     "detail": "Türkiye",
+     "tier": 1
+    },
+    {
+     "name": "Ramen",
+     "detail": "Japan",
+     "tier": 1
+    },
+    {
+     "name": "Tacos",
+     "detail": "Mexico",
+     "tier": 1,
+     "wiki": "Taco"
+    },
+    {
+     "name": "Fried Chicken",
+     "detail": "USA",
+     "tier": 1
+    },
+    {
+     "name": "Dumplings",
+     "detail": "China",
+     "tier": 1,
+     "wiki": "Dumpling"
+    },
+    {
+     "name": "Plov",
+     "detail": "Azerbaijan",
+     "tier": 1,
+     "wiki": "Pilaf"
+    },
+    {
+     "name": "Dolma",
+     "detail": "Azerbaijan",
+     "tier": 2
+    },
+    {
+     "name": "Pad Thai",
+     "detail": "Thailand",
+     "tier": 2
+    },
+    {
+     "name": "Paella",
+     "detail": "Spain",
+     "tier": 2
+    },
+    {
+     "name": "Pho",
+     "detail": "Vietnam",
+     "tier": 2
+    },
+    {
+     "name": "Shawarma",
+     "detail": "Levant",
+     "tier": 2
+    },
+    {
+     "name": "Lasagna",
+     "detail": "Italy",
+     "tier": 2,
+     "wiki": "Lasagne"
+    },
+    {
+     "name": "Biryani",
+     "detail": "India",
+     "tier": 2
+    },
+    {
+     "name": "Khinkali",
+     "detail": "Georgia",
+     "tier": 2
+    },
+    {
+     "name": "Bibimbap",
+     "detail": "South Korea",
+     "tier": 2
+    },
+    {
+     "name": "Falafel",
+     "detail": "Levant",
+     "tier": 2
+    },
+    {
+     "name": "Düşbərə",
+     "detail": "Azerbaijan",
+     "tier": 3,
+     "wiki": "Dushbara"
+    },
+    {
+     "name": "Qutab",
+     "detail": "Azerbaijan",
+     "tier": 3
+    },
+    {
+     "name": "Okonomiyaki",
+     "detail": "Japan",
+     "tier": 3
+    },
+    {
+     "name": "Ceviche",
+     "detail": "Peru",
+     "tier": 3
+    },
+    {
+     "name": "Injera with Doro Wat",
+     "detail": "Ethiopia",
+     "tier": 3,
+     "wiki": "Doro wat"
+    },
+    {
+     "name": "Poutine",
+     "detail": "Canada",
+     "tier": 3
+    },
+    {
+     "name": "Borscht",
+     "detail": "Ukraine",
+     "tier": 3
+    },
+    {
+     "name": "Laksa",
+     "detail": "Malaysia",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "languages",
+   "name": "Programming Languages",
+   "emoji": "💻",
+   "blurb": "Settle it once and for all",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "Python",
+     "detail": "1991",
+     "tier": 1,
+     "wiki": "Python (programming language)"
+    },
+    {
+     "name": "JavaScript",
+     "detail": "1995",
+     "tier": 1
+    },
+    {
+     "name": "Java",
+     "detail": "1995",
+     "tier": 1,
+     "wiki": "Java (programming language)"
+    },
+    {
+     "name": "C",
+     "detail": "1972",
+     "tier": 1,
+     "wiki": "C (programming language)"
+    },
+    {
+     "name": "C++",
+     "detail": "1985",
+     "tier": 1
+    },
+    {
+     "name": "TypeScript",
+     "detail": "2012",
+     "tier": 1
+    },
+    {
+     "name": "Go",
+     "detail": "2009",
+     "tier": 1,
+     "wiki": "Go (programming language)"
+    },
+    {
+     "name": "Rust",
+     "detail": "2010",
+     "tier": 1,
+     "wiki": "Rust (programming language)"
+    },
+    {
+     "name": "C#",
+     "detail": "2000",
+     "tier": 1,
+     "wiki": "C Sharp (programming language)"
+    },
+    {
+     "name": "SQL",
+     "detail": "1974",
+     "tier": 1
+    },
+    {
+     "name": "Kotlin",
+     "detail": "2011",
+     "tier": 2,
+     "wiki": "Kotlin (programming language)"
+    },
+    {
+     "name": "Swift",
+     "detail": "2014",
+     "tier": 2,
+     "wiki": "Swift (programming language)"
+    },
+    {
+     "name": "PHP",
+     "detail": "1995",
+     "tier": 2
+    },
+    {
+     "name": "Ruby",
+     "detail": "1995",
+     "tier": 2,
+     "wiki": "Ruby (programming language)"
+    },
+    {
+     "name": "Scala",
+     "detail": "2004",
+     "tier": 2,
+     "wiki": "Scala (programming language)"
+    },
+    {
+     "name": "R",
+     "detail": "1993",
+     "tier": 2,
+     "wiki": "R (programming language)"
+    },
+    {
+     "name": "Dart",
+     "detail": "2011",
+     "tier": 2,
+     "wiki": "Dart (programming language)"
+    },
+    {
+     "name": "Bash",
+     "detail": "1989",
+     "tier": 2,
+     "wiki": "Bash (Unix shell)"
+    },
+    {
+     "name": "Elixir",
+     "detail": "2011",
+     "tier": 3,
+     "wiki": "Elixir (programming language)"
+    },
+    {
+     "name": "Haskell",
+     "detail": "1990",
+     "tier": 3
+    },
+    {
+     "name": "Clojure",
+     "detail": "2007",
+     "tier": 3
+    },
+    {
+     "name": "Erlang",
+     "detail": "1986",
+     "tier": 3,
+     "wiki": "Erlang (programming language)"
+    },
+    {
+     "name": "OCaml",
+     "detail": "1996",
+     "tier": 3
+    },
+    {
+     "name": "Lisp",
+     "detail": "1958",
+     "tier": 3,
+     "wiki": "Lisp (programming language)"
+    },
+    {
+     "name": "Fortran",
+     "detail": "1957",
+     "tier": 3
+    },
+    {
+     "name": "Zig",
+     "detail": "2016",
+     "tier": 3,
+     "wiki": "Zig (programming language)"
+    },
+    {
+     "name": "Prolog",
+     "detail": "1972",
+     "tier": 3
+    },
+    {
+     "name": "Smalltalk",
+     "detail": "1972",
+     "tier": 3
+    }
+   ]
+  },
+  {
+   "slug": "cities",
+   "name": "Cities",
+   "emoji": "🌍",
+   "blurb": "Where would you rather be",
+   "mediaKind": "wikipedia",
+   "items": [
+    {
+     "name": "Tokyo",
+     "detail": "Japan",
+     "tier": 1
+    },
+    {
+     "name": "Paris",
+     "detail": "France",
+     "tier": 1
+    },
+    {
+     "name": "New York",
+     "detail": "USA",
+     "tier": 1,
+     "wiki": "New York City"
+    },
+    {
+     "name": "London",
+     "detail": "UK",
+     "tier": 1
+    },
+    {
+     "name": "Rome",
+     "detail": "Italy",
+     "tier": 1
+    },
+    {
+     "name": "Istanbul",
+     "detail": "Türkiye",
+     "tier": 1
+    },
+    {
+     "name": "Barcelona",
+     "detail": "Spain",
+     "tier": 1
+    },
+    {
+     "name": "Dubai",
+     "detail": "UAE",
+     "tier": 1
+    },
+    {
+     "name": "Baku",
+     "detail": "Azerbaijan",
+     "tier": 1
+    },
+    {
+     "name": "Singapore",
+     "detail": "Singapore",
+     "tier": 1
+    },
+    {
+     "name": "Lisbon",
+     "detail": "Portugal",
+     "tier": 2
+    },
+    {
+     "name": "Prague",
+     "detail": "Czechia",
+     "tier": 2
+    },
+    {
+     "name": "Vienna",
+     "detail": "Austria",
+     "tier": 2
+    },
+    {
+     "name": "Seoul",
+     "detail": "South Korea",
+     "tier": 2
+    },
+    {
+     "name": "Amsterdam",
+     "detail": "Netherlands",
+     "tier": 2
+    },
+    {
+     "name": "Copenhagen",
+     "detail": "Denmark",
+     "tier": 2
+    },
+    {
+     "name": "Kyoto",
+     "detail": "Japan",
+     "tier": 2
+    },
+    {
+     "name": "Tbilisi",
+     "detail": "Georgia",
+     "tier": 2
+    },
+    {
+     "name": "Marrakesh",
+     "detail": "Morocco",
+     "tier": 2
+    },
+    {
+     "name": "Buenos Aires",
+     "detail": "Argentina",
+     "tier": 2
+    },
+    {
+     "name": "Sheki",
+     "detail": "Azerbaijan",
+     "tier": 3,
+     "wiki": "Shaki, Azerbaijan"
+    },
+    {
+     "name": "Valparaíso",
+     "detail": "Chile",
+     "tier": 3
+    },
+    {
+     "name": "Tallinn",
+     "detail": "Estonia",
+     "tier": 3
+    },
+    {
+     "name": "Hanoi",
+     "detail": "Vietnam",
+     "tier": 3
+    },
+    {
+     "name": "Ljubljana",
+     "detail": "Slovenia",
+     "tier": 3
+    },
+    {
+     "name": "Bergen",
+     "detail": "Norway",
+     "tier": 3
+    },
+    {
+     "name": "Samarkand",
+     "detail": "Uzbekistan",
+     "tier": 3
+    },
+    {
+     "name": "Cartagena",
+     "detail": "Colombia",
+     "tier": 3,
+     "wiki": "Cartagena, Colombia"
+    }
+   ]
+  },
+  {
+   "slug": "series",
+   "name": "TV Series",
+   "emoji": "📺",
+   "blurb": "Binge-worthy or overrated",
+   "mediaKind": "itunes:tvSeason",
+   "items": [
+    {
+     "name": "Breaking Bad",
+     "detail": "2008",
+     "tier": 1
+    },
+    {
+     "name": "Game of Thrones",
+     "detail": "2011",
+     "tier": 1
+    },
+    {
+     "name": "The Sopranos",
+     "detail": "1999",
+     "tier": 1
+    },
+    {
+     "name": "The Wire",
+     "detail": "2002",
+     "tier": 1
+    },
+    {
+     "name": "Friends",
+     "detail": "1994",
+     "tier": 1
+    },
+    {
+     "name": "Chernobyl",
+     "detail": "2019",
+     "tier": 1,
+     "wiki": "Chernobyl (miniseries)"
+    },
+    {
+     "name": "Stranger Things",
+     "detail": "2016",
+     "tier": 1
+    },
+    {
+     "name": "Sherlock",
+     "detail": "2010",
+     "tier": 1,
+     "wiki": "Sherlock (TV series)"
+    },
+    {
+     "name": "The Office (US)",
+     "detail": "2005",
+     "tier": 1,
+     "wiki": "The Office (American TV series)"
+    },
+    {
+     "name": "True Detective",
+     "detail": "2014",
+     "tier": 2
+    },
+    {
+     "name": "Better Call Saul",
+     "detail": "2015",
+     "tier": 2
+    },
+    {
+     "name": "Fargo",
+     "detail": "2014",
+     "tier": 2,
+     "wiki": "Fargo (TV series)"
+    },
+    {
+     "name": "Mr. Robot",
+     "detail": "2015",
+     "tier": 2
+    },
+    {
+     "name": "Peaky Blinders",
+     "detail": "2013",
+     "tier": 2
+    },
+    {
+     "name": "Dark",
+     "detail": "2017",
+     "tier": 2,
+     "wiki": "Dark (TV series)"
+    },
+    {
+     "name": "Band of Brothers",
+     "detail": "2001",
+     "tier": 2,
+     "wiki": "Band of Brothers (miniseries)"
+    },
+    {
+     "name": "Succession",
+     "detail": "2018",
+     "tier": 2,
+     "wiki": "Succession (TV series)"
+    },
+    {
+     "name": "The Crown",
+     "detail": "2016",
+     "tier": 2,
+     "wiki": "The Crown (TV series)"
+    },
+    {
+     "name": "The Leftovers",
+     "detail": "2014",
+     "tier": 3,
+     "wiki": "The Leftovers (TV series)"
+    },
+    {
+     "name": "Twin Peaks",
+     "detail": "1990",
+     "tier": 3
+    },
+    {
+     "name": "Deadwood",
+     "detail": "2004",
+     "tier": 3,
+     "wiki": "Deadwood (TV series)"
+    },
+    {
+     "name": "Six Feet Under",
+     "detail": "2001",
+     "tier": 3,
+     "wiki": "Six Feet Under (TV series)"
+    },
+    {
+     "name": "Rectify",
+     "detail": "2013",
+     "tier": 3
+    },
+    {
+     "name": "The Bureau",
+     "detail": "2015",
+     "tier": 3,
+     "wiki": "The Bureau (TV series)"
+    },
+    {
+     "name": "Babylon Berlin",
+     "detail": "2017",
+     "tier": 3
+    },
+    {
+     "name": "Halt and Catch Fire",
+     "detail": "2014",
+     "tier": 3,
+     "wiki": "Halt and Catch Fire (TV series)"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,112 @@
+@page "/devices"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+@inject TimeProvider Clock
+
+<PageTitle>Devices · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="smartphone" Size="14" /> Anonymous by design</div>
+        <h1>Devices</h1>
+        <p>There are no accounts. Each install creates a random id, which is all we know about a player. Blocking a device keeps it playing but stops its answers counting towards community rankings.</p>
+    </div>
+</div>
+
+<div class="grid grid-3" style="margin-bottom:16px">
+    <StatCard Label="Seen in the last 24 h" Icon="activity" Value="@_rows.Count(r => Clock.GetUtcNow() - r.LastSeen < TimeSpan.FromDays(1))" Foot="@($"{_rows.Count:N0} devices in total")" />
+    <StatCard Label="Answers per device" Icon="zap" Text="@(_rows.Count == 0 ? "0" : Math.Round(_rows.Average(r => r.Answers)).ToString("N0"))" Foot="Mean across all devices" Color="#14b8a6" />
+    <StatCard Label="Blocked" Icon="ban" Value="@_rows.Count(r => r.Blocked)" Foot="Excluded from community rankings" Color="#e5484d" />
+</div>
+
+<div class="card">
+    <div class="toolbar">
+        <div class="segmented">
+            @foreach (var f in new[] { "All", "Suspicious", "Blocked" })
+            {
+                <button class="@(_show == f ? "on" : "")" @onclick="@(() => _show = f)">@f</button>
+            }
+        </div>
+        <span class="small muted">Suspicious means answers faster than @SuspectMs ms on average.</span>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>Device</th><th>Platform</th><th class="right">Sessions</th><th class="right">Answers</th><th class="right">Avg. answer</th><th>First seen</th><th>Last seen</th><th>Counts</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var d in Visible.Take(100))
+                {
+                    <tr @key="d.Id" class="@(d.Blocked ? "dim" : "")">
+                        <td class="mono">@d.Id.ToString()[..13]…</td>
+                        <td><span class="chip outline">@(d.Platform == "ios" ? "iOS" : d.Platform == "android" ? "Android" : "Unknown") @d.Version</span></td>
+                        <td class="right num">@d.Sessions</td>
+                        <td class="right num">@d.Answers.ToString("N0")</td>
+                        <td class="right num @(d.AvgMs is > 0 and < SuspectMs ? "" : "muted")" style="@(d.AvgMs is > 0 and < SuspectMs ? "color:var(--bad);font-weight:600" : "")">@(d.AvgMs > 0 ? $"{d.AvgMs / 1000:0.0} s" : "—")</td>
+                        <td class="small muted">@d.FirstSeen.ToString("d MMM", CultureInfo.InvariantCulture)</td>
+                        <td class="small muted">@Palette.Ago(d.LastSeen, Clock.GetUtcNow())</td>
+                        <td><label class="switch" title="Counts towards community rankings"><input type="checkbox" checked="@(!d.Blocked)" @onchange="@(() => ToggleBlock(d))" /><span></span></label></td>
+                        <td class="right"><button class="btn sm ghost danger" title="Delete this device's data" @onclick="@(() => Delete(d))"><Icon Name="trash" Size="14" /></button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private const double SuspectMs = 600;
+    private sealed record Row(Guid Id, string? Platform, string? Version, int Sessions, int Answers, double AvgMs, DateTimeOffset FirstSeen, DateTimeOffset LastSeen, bool Blocked);
+    private List<Row> _rows = [];
+    private string _show = "All";
+
+    private IEnumerable<Row> Visible => _show switch
+    {
+        "Blocked" => _rows.Where(r => r.Blocked),
+        "Suspicious" => _rows.Where(r => r.AvgMs is > 0 and < SuspectMs),
+        _ => _rows,
+    };
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var devices = await db.Devices.AsNoTracking().ToListAsync();
+        var sessions = await db.Sessions.AsNoTracking()
+            .Select(s => new { s.DeviceId, Count = s.Comparisons.Count, s.CreatedAt, s.UpdatedAt }).ToListAsync();
+        _rows = devices.Select(d =>
+        {
+            var mine = sessions.Where(s => s.DeviceId == d.Id).ToList();
+            var answers = mine.Sum(s => s.Count);
+            var ms = mine.Where(s => s.Count > 1).Sum(s => (s.UpdatedAt - s.CreatedAt).TotalMilliseconds);
+            var gaps = mine.Where(s => s.Count > 1).Sum(s => s.Count - 1);
+            return new Row(d.Id, d.Platform, d.AppVersion, mine.Count, answers, gaps == 0 ? 0 : ms / gaps, d.FirstSeenAt, d.LastSeenAt, d.IsBlocked);
+        }).OrderByDescending(r => r.LastSeen).ToList();
+    }
+
+    private async Task ToggleBlock(Row r)
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        var d = await db.Devices.FirstAsync(x => x.Id == r.Id);
+        d.IsBlocked = !d.IsBlocked;
+        await db.SaveChangesAsync();
+        await Audit(d.IsBlocked ? "device.block" : "device.unblock", r.Id.ToString()[..8], d.IsBlocked ? "Excluded from community rankings" : "Counts again");
+        Toast.Show(d.IsBlocked ? "Device blocked. Recompute rankings to apply." : "Device unblocked");
+        await Load();
+    }
+
+    private async Task Delete(Row r)
+    {
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<SessionSyncService>().DeleteDeviceAsync(r.Id);
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync("device.delete", r.Id.ToString()[..8], $"{r.Sessions} sessions, {r.Answers} answers removed");
+        Toast.Show("Device data deleted");
+        await Load();
+    }
+
+    private async Task Audit(string action, string subject, string details)
+    {
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync(action, subject, details);
+    }
+}

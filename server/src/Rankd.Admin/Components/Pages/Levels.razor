@@ -1,0 +1,85 @@
+@page "/levels"
+@inject IDbContextFactory<RankdDbContext> Factory
+@inject IServiceScopeFactory Scopes
+@inject Toasts Toast
+
+<PageTitle>Levels · Rankd Admin</PageTitle>
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow"><Icon Name="sliders" Size="14" /> Difficulty</div>
+        <h1>Levels</h1>
+        <p>A level decides how many options enter a ranking, how deep into the catalogue it reaches, and how many taps it takes. A pool or budget of 0 means "the whole topic" and "sized to the pool".</p>
+    </div>
+    <div class="actions"><button class="btn primary" @onclick="Save"><Icon Name="check" Size="16" /> Save changes</button></div>
+</div>
+
+<div class="grid grid-4">
+    @foreach (var l in _levels)
+    {
+        <div class="card card-pad stack" style="gap:14px">
+            <div class="row">
+                <span style="font-size:34px">@l.Emoji</span>
+                <div><h2>@l.Name</h2><div class="small muted mono">@l.Id</div></div>
+            </div>
+            <div class="field"><label>Description</label><textarea class="textarea" style="min-height:64px" @bind="l.Description"></textarea></div>
+            <div class="form-grid">
+                <div class="field"><label>Pool size</label><input class="input" type="number" min="0" @bind="l.PoolSize" /></div>
+                <div class="field"><label>Round budget</label><input class="input" type="number" min="0" @bind="l.RoundBudget" /></div>
+            </div>
+            <div class="field">
+                <label>Unlocked tiers</label>
+                <div class="row">
+                    @foreach (var t in new[] { 1, 2, 3 })
+                    {
+                        var on = l.TierList.Contains(t);
+                        <button class="chip tier @(on ? $"tier-{t}" : "outline")" style="width:auto;padding:0 10px" @onclick="@(() => ToggleTier(l, t))">
+                            @(t switch { 1 => "Famous", 2 => "Known", _ => "Deep cuts" })
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="small muted">
+                ≈ <b style="color:var(--text)">@Taps(l)</b> taps for a pool of @(l.PoolSize == 0 ? "a 30-item topic" : l.PoolSize.ToString())
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Level> _levels = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        _levels = await db.Levels.AsNoTracking().OrderBy(l => l.SortOrder).ToListAsync();
+    }
+
+    private static int Taps(Level l) => Rankd.Core.Catalogue.Pools.RoundsFor(l.RoundBudget, l.PoolSize == 0 ? 30 : l.PoolSize);
+
+    private static void ToggleTier(Level l, int t)
+    {
+        var tiers = l.TierList.ToList();
+        if (!tiers.Remove(t)) tiers.Add(t);
+        if (tiers.Count == 0) return;
+        l.Tiers = string.Join(',', tiers.Order());
+    }
+
+    private async Task Save()
+    {
+        await using var db = await Factory.CreateDbContextAsync();
+        foreach (var l in _levels)
+        {
+            var row = await db.Levels.FirstAsync(x => x.Id == l.Id);
+            row.Description = l.Description;
+            row.PoolSize = Math.Max(0, l.PoolSize);
+            row.RoundBudget = Math.Max(0, l.RoundBudget);
+            row.Tiers = l.Tiers;
+        }
+        await db.SaveChangesAsync();
+        using var scope = Scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<AuditLogger>().LogAsync("level.update", "Levels",
+            string.Join(" · ", _levels.Select(l => $"{l.Name} {l.PoolSize}/{l.RoundBudget} [{l.Tiers}]")));
+        Toast.Show("Levels saved. The app picks them up on its next refresh.");
+    }
+}

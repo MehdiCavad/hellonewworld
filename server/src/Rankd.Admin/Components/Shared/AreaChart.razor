@@ -1,0 +1,82 @@
+@* A dependency-free SVG area chart with an optional dashed comparison series. *@
+<svg class="chart" viewBox="0 0 @W @H" role="img" aria-label="@Label">
+    <defs>
+        <linearGradient id="@_id" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--brand)" stop-opacity=".28" />
+            <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
+        </linearGradient>
+    </defs>
+    @for (int i = 0; i <= 4; i++)
+    {
+        var y = Top + (H - Top - Bottom) * i / 4.0;
+        var value = Max * (4 - i) / 4.0;
+        <line class="gridline" x1="@Left" x2="@(W - 8)" y1="@F(y)" y2="@F(y)" />
+        @Text(Left - 10, y + 4, "end", Palette.Compact(value))
+    }
+    @if (Values.Count > 1)
+    {
+        <path d="@AreaPath(Values)" fill="url(#@_id)" />
+        @if (Secondary is { Count: > 1 })
+        {
+            <path class="line-2" d="@LinePath(Secondary)" />
+        }
+        <path class="line" d="@LinePath(Values)" />
+        <circle cx="@F(X(Values.Count - 1))" cy="@F(Y(Values[^1]))" r="4.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="2.5" />
+        @for (int i = 0; i < Labels.Count; i += Math.Max(1, Labels.Count / 6))
+        {
+            @Text(X(i), H - 6, "middle", Labels[i])
+        }
+    }
+</svg>
+
+@code {
+    [Parameter] public IReadOnlyList<double> Values { get; set; } = [];
+    [Parameter] public IReadOnlyList<double>? Secondary { get; set; }
+    [Parameter] public IReadOnlyList<string> Labels { get; set; } = [];
+    [Parameter] public string Label { get; set; } = "Chart";
+    [Parameter] public int H { get; set; } = 240;
+
+    private const int W = 760, Left = 44, Top = 12, Bottom = 30;
+    private readonly string _id = "g" + Guid.NewGuid().ToString("N")[..8];
+
+    private double Max
+    {
+        get
+        {
+            var max = Math.Max(Values.DefaultIfEmpty(0).Max(), Secondary?.DefaultIfEmpty(0).Max() ?? 0);
+            if (max <= 0) return 4;
+            var magnitude = Math.Pow(10, Math.Floor(Math.Log10(max)));
+            return Math.Ceiling(max * 1.1 / magnitude * 2) / 2 * magnitude;
+        }
+    }
+
+    private double X(int i) => Left + (W - Left - 8) * (Values.Count <= 1 ? 0 : (double)i / (Values.Count - 1));
+    private double Y(double v) => Top + (H - Top - Bottom) * (1 - v / Max);
+    // Razor reserves <text>, so SVG labels are emitted as markup.
+    private static MarkupString Text(double x, double y, string anchor, string value) =>
+        new($"<text class=\"axis\" x=\"{F(x)}\" y=\"{F(y)}\" text-anchor=\"{anchor}\">{System.Net.WebUtility.HtmlEncode(value)}</text>");
+
+    private static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+
+    // Monotone-ish smoothing with Catmull-Rom → Bézier, clamped to the plot.
+    private string LinePath(IReadOnlyList<double> values)
+    {
+        var pts = values.Select((v, i) => (X: X(i), Y: Y(v))).ToList();
+        var sb = new System.Text.StringBuilder($"M{F(pts[0].X)},{F(pts[0].Y)}");
+        for (int i = 0; i < pts.Count - 1; i++)
+        {
+            var p0 = pts[Math.Max(0, i - 1)];
+            var p1 = pts[i];
+            var p2 = pts[i + 1];
+            var p3 = pts[Math.Min(pts.Count - 1, i + 2)];
+            double t = 0.18;
+            var c1 = (X: p1.X + (p2.X - p0.X) * t, Y: Math.Min(H - Bottom, p1.Y + (p2.Y - p0.Y) * t));
+            var c2 = (X: p2.X - (p3.X - p1.X) * t, Y: Math.Min(H - Bottom, p2.Y - (p3.Y - p1.Y) * t));
+            sb.Append($" C{F(c1.X)},{F(c1.Y)} {F(c2.X)},{F(c2.Y)} {F(p2.X)},{F(p2.Y)}");
+        }
+        return sb.ToString();
+    }
+
+    private string AreaPath(IReadOnlyList<double> values) =>
+        $"{LinePath(values)} L{F(X(values.Count - 1))},{H - Bottom} L{F(X(0))},{H - Bottom} Z";
+}

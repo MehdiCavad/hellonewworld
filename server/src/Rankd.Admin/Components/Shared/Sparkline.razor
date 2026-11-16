@@ -1,0 +1,23 @@
+<svg class="spark" width="@Width" height="@Height" viewBox="0 0 @Width @Height" aria-hidden="true">
+    @if (Values.Count > 1)
+    {
+        <path d="@Path(true)" fill="@Color" fill-opacity=".12" />
+        <path d="@Path(false)" fill="none" stroke="@Color" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
+    }
+</svg>
+
+@code {
+    [Parameter] public IReadOnlyList<double> Values { get; set; } = [];
+    [Parameter] public string Color { get; set; } = "var(--brand)";
+    [Parameter] public int Width { get; set; } = 96;
+    [Parameter] public int Height { get; set; } = 30;
+
+    private string Path(bool area)
+    {
+        double max = Math.Max(1, Values.Max()), min = Values.Min();
+        string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+        var pts = Values.Select((v, i) => (X: (double)i / (Values.Count - 1) * Width, Y: 2 + (Height - 4) * (1 - (v - min) / Math.Max(1e-9, max - min))));
+        var line = "M" + string.Join(" L", pts.Select(p => $"{F(p.X)},{F(p.Y)}"));
+        return area ? $"{line} L{Width},{Height} L0,{Height} Z" : line;
+    }
+}
